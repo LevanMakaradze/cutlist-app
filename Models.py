@@ -144,3 +144,46 @@ class LayoutResult:
             return 0.0
 
         return (used_area / total_area) * 100.0
+
+
+def expand_parts(parts: list[PartSpec]) -> list[PartInstance]:
+    """ 
+    Expands part specifications into individual part instances.
+    
+    Multiple identical parts --> Individual part instances
+    """
+    
+    expanded = []
+
+    for spec in parts:
+        for instance in range(spec.quantity):
+            expanded.append(
+                PartInstance(
+                    spec=spec,
+                    instance=instance,
+                    width=spec.width,
+                    height=spec.height,
+                )
+            )
+
+    return expanded
+
+
+def expand_sheets(sheets: list[SheetSpec]) -> list[SheetLayout]:
+    """ 
+    Expands sheet specifications into individual sheet instances.
+    
+    Multiple identical sheets --> Individual sheet instances
+    """
+    expanded = []
+
+    for spec in sheets:
+        for instance in range(spec.quantity):
+            expanded.append(
+                SheetLayout(
+                    sheet=spec,
+                    sheet_number=instance + 1,
+                )
+            )
+
+    return expanded
