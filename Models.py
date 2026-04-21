@@ -43,7 +43,7 @@ class PartInstance:
 
     def get_label(self):
         if self.spec.quantity > 1:
-            return f"{self.spec.name}.{self.instance + 1}"
+            return f"{self.spec.name}-{self.instance + 1}"
         return self.spec.name
 
     def rotated_copy(self):
@@ -54,6 +54,9 @@ class PartInstance:
             self.width,
             not self.rotated,
         )
+        
+    def __repr__(self):
+        return f"{self.get_label()} ({self.width} x {self.height})"
                     
 class Placement:
     def __init__(
@@ -69,6 +72,9 @@ class Placement:
         self.y = y
         self.width = width
         self.height = height
+    
+    def __repr__(self):
+        return f"Part:{self.part} X:{self.x}, Y:{self.y}\n"
         
 class SheetLayout:
     def __init__(
@@ -97,7 +103,9 @@ class SheetLayout:
             return 0.0
 
         return (self.get_used_area() / area) * 100.0
-
+    
+    def __repr__(self):
+        return f"{self.sheet.name} #{self.sheet_number} ({self.sheet.width} x {self.sheet.height}): {self.placements}\n\n"
 
 class LayoutResult:
     def __init__(
@@ -144,6 +152,9 @@ class LayoutResult:
             return 0.0
 
         return (used_area / total_area) * 100.0
+    
+    def __repr__(self):
+        return f"Algorithm: {self.algorithm}\n Sheets: {self.sheets}\n Unplaced Parts: {self.unplaced}"
 
 
 def expand_parts(parts: list[PartSpec]) -> list[PartInstance]:
