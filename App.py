@@ -1,13 +1,17 @@
-from GuillotineLayoutEngine import *
-from GuillotineRotationAwareEngine import *
+from Models import PartSpec, SheetSpec, LayoutResult
+from GuillotineLayoutEngine import GuillotineLayoutEngine
+from GuillotineRotationAwareEngine import GuillotineRotationAwareEngine
+from GuillotineLookAheadEngine import GuillotineLookAheadEngine
+
 ALGORITHMS = {
     GuillotineLayoutEngine.name: GuillotineLayoutEngine,
     GuillotineRotationAwareEngine.name: GuillotineRotationAwareEngine,
+    GuillotineLookAheadEngine.name: GuillotineLookAheadEngine
 }
 
 SETTINGS = {
-    # guillotine, guillotine rotation aware
-    "algorithm": "guillotine",
+    # guillotine, guillotine rotation aware, guillotine look-ahead
+    "algorithm": "guillotine look-ahead",
     "kerf": 1.0,
     # "length" means first split creates a horizontal row.
     # "width" means first split creates a vertical column.

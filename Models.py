@@ -75,6 +75,22 @@ class Placement:
     
     def __repr__(self):
         return f"Part:{self.part} X:{self.x}, Y:{self.y}\n"
+
+class RemainingPiece:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def __repr__(self):
+        return f"Remaining X:{self.x}, Y:{self.y}, {self.width} x {self.height}\n"
         
 class SheetLayout:
     def __init__(
@@ -82,10 +98,12 @@ class SheetLayout:
         sheet: SheetSpec,
         sheet_number: int,
         placements: list[Placement] = None,
+        remaining_parts: list[RemainingPiece] = None,
     ):
         self.sheet = sheet
         self.sheet_number = sheet_number
         self.placements = placements if placements is not None else []
+        self.remaining_parts = remaining_parts if remaining_parts is not None else []
 
     def get_used_area(self):
         return sum(
@@ -105,7 +123,10 @@ class SheetLayout:
         return (self.get_used_area() / area) * 100.0
     
     def __repr__(self):
-        return f"{self.sheet.name} #{self.sheet_number} ({self.sheet.width} x {self.sheet.height}): {self.placements}\n\n"
+        return (
+            f"{self.sheet.name} #{self.sheet_number} ({self.sheet.width} x {self.sheet.height}): "
+            f"Placed: {self.placements} Remaining: {self.remaining_parts}\n\n"
+        )
 
 class LayoutResult:
     def __init__(

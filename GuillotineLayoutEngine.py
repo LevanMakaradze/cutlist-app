@@ -39,6 +39,7 @@ class GuillotineLayoutEngine(LayoutEngine):
             placement = node.insert(part, kerf, vertical_first)
             sheet_layouts[sheet_index].placements.append(placement)
 
+        self.record_remaining_parts(sheet_layouts, roots)
         return LayoutResult(sheets=sheet_layouts, unplaced=unplaced, algorithm=self.name)
 
     def _find_best_position(self, part: PartInstance, roots: list[CutNode]) -> tuple[int, CutNode] | None:

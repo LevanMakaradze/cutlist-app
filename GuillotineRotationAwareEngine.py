@@ -1,6 +1,5 @@
 from CutNode import CutNode
 from LayoutEngine import *
-# from Models import PartSpec, Sheetpec, LayoutResult, PartInstance, expand_parts, expand_sheets
 
 class GuillotineRotationAwareEngine(LayoutEngine):
     """
@@ -35,6 +34,7 @@ class GuillotineRotationAwareEngine(LayoutEngine):
             placement = node.insert(best_part, kerf, vertical_first)
             sheet_layouts[sheet_index].placements.append(placement)
 
+        self.record_remaining_parts(sheet_layouts, roots)
         return LayoutResult(sheets=sheet_layouts, unplaced=unplaced, algorithm=self.name)
 
     def _best_orientation(
