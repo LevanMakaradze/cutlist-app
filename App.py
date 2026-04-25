@@ -1,9 +1,5 @@
 from Models import PartSpec, SheetSpec, LayoutResult
-from GuillotineRotationAwareEngine import GuillotineRotationAwareEngine
-
-ALGORITHMS = {
-    GuillotineRotationAwareEngine.name: GuillotineRotationAwareEngine,
-}
+from GuillotineEngine import ALL_VARIANTS
 
 SETTINGS = {
     # guillotine rotation aware
@@ -29,10 +25,9 @@ PARTS = [
 def run_layout(parts: list[PartSpec], sheets: list[SheetSpec], settings: dict) -> LayoutResult:
     algorithm_name = settings.get("algorithm", "simple heuristic")
     try:
-        engine = ALGORITHMS[algorithm_name]()
+        engine = ALL_VARIANTS[0]()
     except KeyError as exc:
-        available = ", ".join(sorted(ALGORITHMS))
-        raise ValueError(f"Unknown algorithm {algorithm_name!r}. Available: {available}") from exc
+        raise ValueError(f"Unknown algorithm {algorithm_name}") from exc
     return engine.layout(parts, sheets, settings)
 
 print(run_layout(PARTS,SHEETS,SETTINGS))

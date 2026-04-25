@@ -1,20 +1,30 @@
 from CutNode import CutNode
 from LayoutEngine import *
 
-class GuillotineRotationAwareEngine(LayoutEngine):
+class GuillotineEngine(LayoutEngine):
     """
-    Best Fit Decreasing guillotine packer with better rotation selection.
+    Abstract base class for all guillotine variants.
 
-    Same as GuillotineLayoutEngine, but both orientations of every part
-    are evaluated simultaneously and the one with the better fit score
-    is chosen.
+    Checks both orientations of every part and chooses better fit. 
+    
+    Subclasses must define _score() and _split_vertical() to specify the scoring and split heuristics.
+
+    Scoring heuristics:
+        BSSF - Best Short Side Fit: minimize the shorter leftover side.
+        BLSF - Best Long Side Fit: minimize the longer leftover side.
+        BAF  - Best Area Fit: minimize total leftover area.
+
+    Split heuristics:
+        MAXAS - Maximize Area of Smaller rectangle: split so the smaller child is as large as possible.
+        MINAS - Minimize Area of Smaller rectangle: split so the smaller child is as small as possible.
+        SLAS - Shorter Leftover Axis Split: split along whichever leftover dimension is shorter.
+        LLAS - Longer Leftover Axis Split: split along the longer leftover dimension. Opposite of SLAS.
     """
     
-    name = "guillotine rotation aware"
+    name = "guillotine"
 
     def layout(self, parts: list[PartSpec], sheets: list[SheetSpec], settings: dict) -> LayoutResult:
         kerf = float(settings.get("kerf", 4.4))
-        vertical_first = settings.get("first_cut", "length") == "width"
 
         part_instances = expand_parts(parts)
         part_instances.sort(key=lambda p: (p.width * p.height, max(p.width, p.height)), reverse=True)
@@ -31,7 +41,7 @@ class GuillotineRotationAwareEngine(LayoutEngine):
                 continue
 
             sheet_index, node = best_result
-            placement = node.insert(best_part, kerf, vertical_first)
+            placement = self._insert(node, best_part, kerf)
             sheet_layouts[sheet_index].placements.append(placement)
 
         self.record_remaining_parts(sheet_layouts, roots)
@@ -42,27 +52,14 @@ class GuillotineRotationAwareEngine(LayoutEngine):
         part: PartInstance,
         roots: list[CutNode],
     ) -> tuple[PartInstance, tuple[int, CutNode] | None]:
-        
-        candidates: list[tuple[PartInstance, tuple[float, float, float, int], int, CutNode]] = []
+        candidates: list[tuple[PartInstance, tuple, int, CutNode]] = []
 
-        normal_result = self._find_best_position(part, roots)
-        if normal_result is not None:
-            sheet_index, node = normal_result
-            score = self._score(part, node, sheet_index)
-            candidates.append((part, score, sheet_index, node))
-
-        can_try_rotated = (
-            part.spec.can_rotate
-            and part.width != part.height
-        )
-        
-        if can_try_rotated:
-            rotated = part.rotated_copy()
-            rotated_result = self._find_best_position(rotated, roots)
-            if rotated_result is not None:
-                sheet_index, node = rotated_result
-                score = self._score(rotated, node, sheet_index)
-                candidates.append((rotated, score, sheet_index, node))
+        for orientation in self._all_orientations(part):
+            result = self._find_best_node(orientation, roots)
+            if result is not None:
+                sheet_index, node = result
+                score = self._score(orientation, node, sheet_index)
+                candidates.append((orientation, score, sheet_index, node))
 
         if not candidates:
             return part, None
@@ -70,12 +67,12 @@ class GuillotineRotationAwareEngine(LayoutEngine):
         best_part, _, best_sheet, best_node = min(candidates, key=lambda c: c[1])
         return best_part, (best_sheet, best_node)
 
-    def _find_best_position(
+    def _find_best_node(
         self,
         part: PartInstance,
         roots: list[CutNode],
     ) -> tuple[int, CutNode] | None:
-        best: tuple[tuple[float, float, float, int], int, CutNode] | None = None
+        best: tuple[tuple, int, CutNode] | None = None
         for sheet_index, root in enumerate(roots):
             for node in root.free_nodes():
                 if not node.can_fit(part):
@@ -87,13 +84,141 @@ class GuillotineRotationAwareEngine(LayoutEngine):
             return None
         return best[1], best[2]
 
-    def _score(
-        self,
-        part: PartInstance,
-        node: CutNode,
-        sheet_index: int,
-    ) -> tuple[float, float, float, int]:
-        area_waste = (node.width * node.height) - (part.width * part.height)
-        short_side_waste = min(node.width - part.width, node.height - part.height)
-        long_side_waste = max(node.width - part.width, node.height - part.height)
-        return (area_waste, short_side_waste, long_side_waste, sheet_index)
+    def _all_orientations(self, part: PartInstance) -> list[PartInstance]:
+        orientations = [part]
+        if part.spec.can_rotate and part.width != part.height:
+            orientations.append(part.rotated_copy())
+        return orientations
+
+    # abstract interface
+
+    def _score(self, part: PartInstance, node: CutNode, sheet_index: int) -> tuple:
+        raise NotImplementedError
+
+    def _split_vertical(self, remaining_w: float, remaining_h: float) -> bool:
+        raise NotImplementedError
+
+    # insertation
+
+    def _insert(self, node: CutNode, part: PartInstance, kerf: float) -> Placement:
+        if not node.can_fit(part):
+            raise ValueError(f"Part {part.get_label()} does not fit selected node")
+
+        node.part = part
+        remaining_w = node.width - part.width
+        remaining_h = node.height - part.height
+
+        right_w  = max(0.0, remaining_w - kerf) if remaining_w > kerf else 0.0
+        bottom_h = max(0.0, remaining_h - kerf) if remaining_h > kerf else 0.0
+
+        if self._split_vertical(remaining_w, remaining_h):
+            if right_w > 0:
+                node.left  = CutNode(node.x + part.width + kerf, node.y, right_w, node.height)
+            if bottom_h > 0:
+                node.right = CutNode(node.x, node.y + part.height + kerf, part.width, bottom_h)
+        else:
+            if bottom_h > 0:
+                node.left  = CutNode(node.x, node.y + part.height + kerf, node.width, bottom_h)
+            if right_w > 0:
+                node.right = CutNode(node.x + part.width + kerf, node.y, right_w, part.height)
+
+        return Placement(part=part, x=node.x, y=node.y, width=part.width, height=part.height)
+
+
+# scoring heuristics
+
+class _BssfMixin:
+    def _score(self, part: PartInstance, node: CutNode, sheet_index: int) -> tuple:
+        short_side = min(node.width - part.width, node.height - part.height)
+        long_side  = max(node.width - part.width, node.height - part.height)
+        return (short_side, long_side, sheet_index)
+
+class _BlsfMixin:
+    def _score(self, part: PartInstance, node: CutNode, sheet_index: int) -> tuple:
+        short_side = min(node.width - part.width, node.height - part.height)
+        long_side  = max(node.width - part.width, node.height - part.height)
+        return (long_side, short_side, sheet_index)
+
+class _BafMixin:
+    def _score(self, part: PartInstance, node: CutNode, sheet_index: int) -> tuple:
+        area_waste = (node.width - part.width) * node.height + (node.height - part.height) * part.width
+        short_side = min(node.width - part.width, node.height - part.height)
+        return (area_waste, short_side, sheet_index)
+
+
+# split heuristics
+
+class _MaxasMixin:
+    def _split_vertical(self, remaining_w: float, remaining_h: float) -> bool:
+        return remaining_w > remaining_h
+
+class _MinasMixin:
+    def _split_vertical(self, remaining_w: float, remaining_h: float) -> bool:
+        return remaining_w < remaining_h
+
+class _SlasMixin:
+    def _split_vertical(self, remaining_w: float, remaining_h: float) -> bool:
+        return remaining_w < remaining_h
+
+class _LlasMixin:
+    def _split_vertical(self, remaining_w: float, remaining_h: float) -> bool:
+        return remaining_w > remaining_h
+
+
+# variants
+
+class GuillotineBssfMaxas(_BssfMixin, _MaxasMixin, GuillotineEngine):
+    name = "guillotine bssf maxas"
+
+class GuillotineBssfMinas(_BssfMixin, _MinasMixin, GuillotineEngine):
+    name = "guillotine bssf minas"
+
+class GuillotineBssfSlas(_BssfMixin, _SlasMixin, GuillotineEngine):
+    name = "guillotine bssf slas"
+
+class GuillotineBssfLlas(_BssfMixin, _LlasMixin, GuillotineEngine):
+    name = "guillotine bssf llas"
+
+
+
+class GuillotineBlsfMaxas(_BlsfMixin, _MaxasMixin, GuillotineEngine):
+    name = "guillotine blsf maxas"
+
+class GuillotineBlsfMinas(_BlsfMixin, _MinasMixin, GuillotineEngine):
+    name = "guillotine blsf minas"
+
+class GuillotineBlsfSlas(_BlsfMixin, _SlasMixin, GuillotineEngine):
+    name = "guillotine blsf slas"
+
+class GuillotineBlsfLlas(_BlsfMixin, _LlasMixin, GuillotineEngine):
+    name = "guillotine blsf llas"
+
+
+
+class GuillotineBafMaxas(_BafMixin, _MaxasMixin, GuillotineEngine):
+    name = "guillotine baf maxas"
+
+class GuillotineBafMinas(_BafMixin, _MinasMixin, GuillotineEngine):
+    name = "guillotine baf minas"
+
+class GuillotineBafSlas(_BafMixin, _SlasMixin, GuillotineEngine):
+    name = "guillotine baf slas"
+
+class GuillotineBafLlas(_BafMixin, _LlasMixin, GuillotineEngine):
+    name = "guillotine baf llas"
+
+
+ALL_VARIANTS: list[type[GuillotineEngine]] = [
+    GuillotineBssfMaxas,
+    GuillotineBssfMinas,
+    GuillotineBssfSlas,
+    GuillotineBssfLlas,
+    GuillotineBlsfMaxas,
+    GuillotineBlsfMinas,
+    GuillotineBlsfSlas,
+    GuillotineBlsfLlas,
+    GuillotineBafMaxas,
+    GuillotineBafMinas,
+    GuillotineBafSlas,
+    GuillotineBafLlas,
+]
