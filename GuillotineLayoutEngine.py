@@ -1,8 +1,16 @@
 from CutNode import CutNode
 from LayoutEngine import *
 
-class SimpleHeuristicLayoutEngine(LayoutEngine):
-    name = "simple heuristic"
+class GuillotineLayoutEngine(LayoutEngine):
+    """
+    Best Fit Decreasing guillotine packer.
+
+    Parts are sorted largest to smallest, then placed one by one into the
+    free node with the least wasted area. Rotation is tried only when
+    a part cannot fit in its original orientation.
+    """
+    
+    name = "guillotine"
 
     def layout(self, parts: list[PartSpec], sheets: list[SheetSpec], settings: dict) -> LayoutResult:
         kerf = float(settings.get("kerf", 4.4))

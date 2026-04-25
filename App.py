@@ -1,11 +1,13 @@
-from SimpleHeuristicLayoutEngine import *
-
+from GuillotineLayoutEngine import *
+from GuillotineRotationAwareEngine import *
 ALGORITHMS = {
-    SimpleHeuristicLayoutEngine.name: SimpleHeuristicLayoutEngine,
+    GuillotineLayoutEngine.name: GuillotineLayoutEngine,
+    GuillotineRotationAwareEngine.name: GuillotineRotationAwareEngine,
 }
 
 SETTINGS = {
-    "algorithm": "simple heuristic",
+    # guillotine, guillotine rotation aware
+    "algorithm": "guillotine",
     "kerf": 1.0,
     # "length" means first split creates a horizontal row.
     # "width" means first split creates a vertical column.
