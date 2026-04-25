@@ -1,17 +1,13 @@
 from Models import PartSpec, SheetSpec, LayoutResult
-from GuillotineLayoutEngine import GuillotineLayoutEngine
 from GuillotineRotationAwareEngine import GuillotineRotationAwareEngine
-from GuillotineLookAheadEngine import GuillotineLookAheadEngine
 
 ALGORITHMS = {
-    GuillotineLayoutEngine.name: GuillotineLayoutEngine,
     GuillotineRotationAwareEngine.name: GuillotineRotationAwareEngine,
-    GuillotineLookAheadEngine.name: GuillotineLookAheadEngine
 }
 
 SETTINGS = {
-    # guillotine, guillotine rotation aware, guillotine look-ahead
-    "algorithm": "guillotine look-ahead",
+    # guillotine rotation aware
+    "algorithm": "guillotine rotation aware",
     "kerf": 1.0,
     # "length" means first split creates a horizontal row.
     # "width" means first split creates a vertical column.
@@ -25,8 +21,8 @@ SHEETS = [
 PARTS = [
     PartSpec(name="Side", width=720, height=560, quantity=4),
     PartSpec(name="Shelf", width=680, height=520, quantity=6),
-    PartSpec(name="Door", width=760, height=420, quantity=4),
-    PartSpec(name="Back", width=900, height=700, quantity=2, can_rotate=False),
+    PartSpec(name="Door", width=760, height=420, quantity=8),
+    PartSpec(name="Back", width=900, height=700, quantity=4, can_rotate=False),
     PartSpec(name="Drawer", width=500, height=180, quantity=8),
 ]
 
