@@ -44,6 +44,9 @@ class GuillotineEngine(LayoutEngine):
             placement = self._insert(node, best_part, kerf)
             sheet_layouts[sheet_index].placements.append(placement)
 
+        for i in range(len(sheet_layouts)):
+            sheet_layouts[i].root = roots[i]
+    
         self.record_remaining_parts(sheet_layouts, roots)
         return LayoutResult(sheets=sheet_layouts, unplaced=unplaced, algorithm=self.name)
 
