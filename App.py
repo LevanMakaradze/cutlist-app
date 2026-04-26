@@ -1,5 +1,6 @@
 from Models import PartSpec, SheetSpec, LayoutResult
-from GuillotineEngine import ALL_VARIANTS
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from GuillotineEngine import ALL_VARIANTS, GuillotineEngine
 
 SETTINGS = {
     # guillotine rotation aware
@@ -22,12 +23,27 @@ PARTS = [
     PartSpec(name="Drawer", width=500, height=180, quantity=8),
 ]
 
-def run_layout(parts: list[PartSpec], sheets: list[SheetSpec], settings: dict) -> LayoutResult:
-    algorithm_name = settings.get("algorithm", "simple heuristic")
-    try:
-        engine = ALL_VARIANTS[0]()
-    except KeyError as exc:
-        raise ValueError(f"Unknown algorithm {algorithm_name}") from exc
-    return engine.layout(parts, sheets, settings)
+def _run_variant(variant_class: type[GuillotineEngine]) -> LayoutResult:
+    """Runs a single variant. Must be a top-level function for pickling."""
+    return variant_class().layout(PARTS, SHEETS, SETTINGS)
 
-print(run_layout(PARTS,SHEETS,SETTINGS))
+def run_all_parallel() -> list[LayoutResult]:
+    results = []
+    with ProcessPoolExecutor() as executor:
+        futures = {
+            executor.submit(_run_variant, variant): variant
+            for variant in ALL_VARIANTS
+        }
+        for future in as_completed(futures):
+            variant = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                print(f"  {variant.name} failed: {e}")
+
+    return results
+        
+if __name__ == "__main__":
+    results = run_all_parallel()
+    print(results)
