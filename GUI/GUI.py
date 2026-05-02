@@ -21,19 +21,26 @@ from PySide6.QtWidgets import (
 
 from SheetsPanel import SheetsPanel
 from ProjectPanel import ProjectPanel
+from SettingsDialog import SettingsDialog
+from SettingsManager import SettingsManager
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, settings: SettingsManager):
         super().__init__()
 
+        self.settings = settings
         self.create_menu()
         self.create_ui()
-
+        
         self.showMaximized()
 
     def create_menu(self):
         menu_bar = self.menuBar()
-        menu_bar.addAction("პარამეტრები")
+        menu_bar.addAction("პარამეტრები", self._open_settings)
+
+    def _open_settings(self):
+        dlg = SettingsDialog(self.settings, self)
+        dlg.exec()
 
     def create_ui(self):
         central_widget = QWidget()
@@ -75,7 +82,8 @@ if __name__ == "__main__":
 
     load_stylesheet(app)
 
-    window = MainWindow()
+    settings = SettingsManager()
+    window = MainWindow(settings)
     window.show()
 
     sys.exit(app.exec())
