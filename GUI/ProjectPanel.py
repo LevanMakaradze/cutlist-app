@@ -1,9 +1,15 @@
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox, QGroupBox, QHeaderView, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QMessageBox,
+    QComboBox, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
 )
+from CustomTable import CustomTable
 
+COLUMNS = [
+    ("სახელი",    "text"),
+    ("სიგრძე",    "dim"),
+    ("სიგანე",    "dim"),
+    ("რაოდენობა", "qty"),
+    ("მოტრიალება", "check"),
+]
 
 class ProjectPanel(QGroupBox):
 
@@ -14,93 +20,69 @@ class ProjectPanel(QGroupBox):
     def _create_ui(self):
         layout = QVBoxLayout(self)
 
-        job_row = QHBoxLayout()
-
-        job_row.addWidget(QLabel("სახელი"))
-
-        name_input = QLineEdit()
-        name_input.setMinimumWidth(200)
-        name_input.setMaximumWidth(250)
-
-        job_row.addWidget(name_input)
-
-        job_row.addSpacing(20)
-
-        job_row.addWidget(QLabel("მასალა"))
-
-        material_combo = QComboBox()
-        material_combo.addItems(
+        # header
+        header = QHBoxLayout()
+        
+        header.addWidget(QLabel("სახელი"))
+        self.name_input = QLineEdit()
+        self.name_input.setMinimumWidth(200)
+        self.name_input.setMaximumWidth(250)
+        header.addWidget(self.name_input)
+        
+        header.addSpacing(20)
+        
+        header.addWidget(QLabel("მასალა"))
+        self.material_combo = QComboBox()
+        self.material_combo.addItems(
             [
                 "მდფ",
                 "ლამინატი",
             ]
         )
+        self.material_combo.setMinimumWidth(200)
+        self.material_combo.setMaximumWidth(300)
+        header.addWidget(self.material_combo)
         
-        material_combo.setMinimumWidth(200)
-        material_combo.setMaximumWidth(300)
+        header.addSpacing(20)
 
-        job_row.addWidget(material_combo)
-        job_row.addSpacing(20)
-
-        texture_button = QPushButton("ტექსტურის შეცვლა")
-        texture_button.setObjectName("textureButton")
+        self.texture_btn = QPushButton("ყველას მოტრიალების შეცვლა")
+        self.texture_btn.setObjectName("textureToggleButton")
+        self.texture_btn.setFixedWidth(120)
+        header.addWidget(self.texture_btn)
         
-        job_row.addWidget(texture_button)
+        header.addStretch()
         
-        job_row.addStretch()
-        generate_button = QPushButton("ავტომატური განლაგება")
-        generate_button.setObjectName("generateButton")
+        self.generate_btn = QPushButton("ავტომატური განლაგება")
+        self.generate_btn.setObjectName("generateButton")
+        header.addWidget(self.generate_btn)
+
+        layout.addLayout(header)
+
+        # table
+        self.table = CustomTable(COLUMNS)
+        layout.addWidget(self.table)
+
+        # footer buttons
+        buttons = QHBoxLayout()
+        self.clear_btn  = QPushButton("გასუფთავება")
+        self.save_btn   = QPushButton("შენახვა")
+        self.cancel_btn = QPushButton("გაუქმება")
+        self.cancel_btn.setEnabled(False)
+
+        self.clear_btn.clicked.connect(self._on_clear_all)
+        # todo: save and cancel button connects
         
-        job_row.addWidget(generate_button)      
-        
-        layout.addLayout(job_row)
+        buttons.addWidget(self.clear_btn)
+        buttons.addStretch()
+        buttons.addWidget(self.save_btn)
+        buttons.addWidget(self.cancel_btn)
 
-
-        self.parts_table = QTableWidget(20, 5)
-
-        self.parts_table.setHorizontalHeaderLabels(
-            [
-                "სახელი",
-                "სიგრძე",
-                "სიგანე",
-                "რაოდენობა",
-                "მობრუნება",
-            ]
-        )
-
-        self.configure_table(self.parts_table)
-
-        for row in range(20):
-            checkbox_item = QTableWidgetItem()
-            checkbox_item.setFlags(
-                Qt.ItemIsEnabled
-                | Qt.ItemIsUserCheckable
-                | Qt.ItemIsSelectable
-            )
-            checkbox_item.setCheckState(Qt.Unchecked)
-
-            self.parts_table.setItem(row, 4, checkbox_item)
-
-        layout.addWidget(self.parts_table)
-
-        right_buttons = QHBoxLayout()
-        right_buttons.addStretch()
-
-        right_buttons.addWidget(QPushButton("შენახვა"))
-        right_buttons.addWidget(QPushButton("გაუქმება"))
-
-        layout.addLayout(right_buttons)
+        layout.addLayout(buttons)
     
-    def configure_table(self, table):
-        
-        table.horizontalHeader().setStretchLastSection(True)
-
-        header = table.horizontalHeader()
-
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-        header.setSectionResizeMode(3, QHeaderView.Fixed)
-        header.setSectionResizeMode(4, QHeaderView.Stretch)
-
-        table.setColumnWidth(0, 60)
+    def _on_clear_all(self):
+        self.table.clear_all()
+        self.name_input.clear()
+        # todo: combobox
+    
+    def set_unit(self, unit: str):
+        self.table.set_unit(unit)
