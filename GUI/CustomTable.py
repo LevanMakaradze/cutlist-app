@@ -125,6 +125,7 @@ class CustomTable(QWidget):
 
             btn = QPushButton("×")
             btn.setFixedSize(28, 28)
+            btn.setObjectName("rowClearButton")
             btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
             self.table.setCellWidget(
                 row,

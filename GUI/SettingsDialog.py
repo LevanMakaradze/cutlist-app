@@ -15,11 +15,9 @@ class SettingsDialog(QDialog):
     def __init__(self, settings_manager, parent=None):
         super().__init__(parent)
         self.settings = settings_manager
-        # callback list: (callable) called when unit changes in dialog
         self._unit_change_callbacks: list = []
         self.setWindowTitle("პარამეტრები")
-        self.setMinimumSize(580, 340)
-        self.resize(660, 400)
+        self.setFixedSize(700,450)
         self._create_ui()
         self._load()
 
@@ -35,7 +33,7 @@ class SettingsDialog(QDialog):
         self.page_list = QListWidget()
         self.page_list.setObjectName("settingsSidebar")
         self.page_list.addItems(["ერთეული", "ხერხი", "შენახვის დირექტორია"])
-        self.page_list.setFixedWidth(155)
+        self.page_list.setFixedWidth(200)
         self.page_list.setFrameShape(QFrame.NoFrame)
 
         self.stack = QStackedWidget()
@@ -107,7 +105,7 @@ class SettingsDialog(QDialog):
         self.kerf_spin.setDecimals(1)
         self.kerf_spin.setSingleStep(0.1)
         self.kerf_spin.setSuffix(" mm")
-        self.kerf_spin.setMaximumWidth(160)
+        self.kerf_spin.setMaximumWidth(100)
         layout.addWidget(self.kerf_spin)
         layout.addStretch()
         return page

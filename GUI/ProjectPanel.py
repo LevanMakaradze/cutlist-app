@@ -8,7 +8,7 @@ COLUMNS = [
     ("სიგრძე",    "dim"),
     ("სიგანე",    "dim"),
     ("რაოდენობა", "qty"),
-    ("მოტრიალება", "check"),
+    ("ბრუნვა", "check"),
 ]
 
 class ProjectPanel(QGroupBox):
@@ -45,9 +45,9 @@ class ProjectPanel(QGroupBox):
         
         header.addSpacing(20)
 
-        self.texture_btn = QPushButton("ყველას მოტრიალების შეცვლა")
+        self.texture_btn = QPushButton("ბრუნვის გადამრთველი")
         self.texture_btn.setObjectName("textureToggleButton")
-        self.texture_btn.setFixedWidth(120)
+        self.texture_btn.setFixedWidth(200)
         header.addWidget(self.texture_btn)
         
         header.addStretch()
