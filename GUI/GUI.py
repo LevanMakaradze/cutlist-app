@@ -78,8 +78,11 @@ class MainWindow(QMainWindow):
         self.sheets_panel = SheetsPanel(self.settings)
         self.sheets_panel.setFixedWidth(500)
         splitter.addWidget(self.sheets_panel)
-
-        self.project_panel = ProjectPanel()
+        # wire project panel and material updates
+        self.project_panel = ProjectPanel(self.settings)
+        self.sheets_panel.sheets_changed.connect(self.project_panel.update_material_options)
+        # seed initial material list (may be empty until load_saved runs)
+        self.project_panel.update_material_options(self.sheets_panel.get_sheets())
         splitter.addWidget(self.project_panel)
 
 
