@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSplitter,
     QTabWidget,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from SheetsPanel import SheetsPanel
 from ProjectPanel import ProjectPanel
+from HistoryPanel import HistoryPanel
 from SettingsDialog import SettingsDialog
 from SettingsManager import SettingsManager
 
@@ -51,6 +53,36 @@ class MainWindow(QMainWindow):
     def _apply_unit(self, unit: str):
         self.sheets_panel.set_unit(unit)
         self.project_panel.set_unit(unit)
+        self.history_panel.set_unit(unit)
+
+    def _on_project_load_requested(self, data: dict):
+        """Handle loading a project from history."""
+        if self.project_panel.has_unsaved_changes():
+            box = QMessageBox(self)
+            box.setWindowTitle("შეუნახავი ცვლილებები")
+            box.setText("პროექტში არსებობს შეუნახავი ცვლილებები. გსურთ მათი შენახვა ჩატვირთვის წინ?")
+            box.setIcon(QMessageBox.Warning)
+            save_btn = box.addButton("შენახვა და ჩატვირთვა", QMessageBox.AcceptRole)
+            discard_btn = box.addButton("იგნორირება და ჩატვირთვა", QMessageBox.DestructiveRole)
+            cancel_btn = box.addButton("გაუქმება", QMessageBox.RejectRole)
+            box.setDefaultButton(save_btn)
+            box.exec()
+
+            clicked = box.clickedButton()
+            if clicked == cancel_btn:
+                return
+            if clicked == save_btn:
+                if not self.project_panel.save_current():
+                    return
+
+        sheets_used = data.get("sheets_used", [])
+        if not isinstance(sheets_used, list):
+            sheets_used = []
+
+        self.sheets_panel.merge_sheets(sheets_used)
+
+        self.project_panel.load_project(data)
+        self.tabs.setCurrentIndex(0)
 
     def create_ui(self):
         central_widget = QWidget()
@@ -59,14 +91,19 @@ class MainWindow(QMainWindow):
         root_layout = QVBoxLayout(central_widget)
         root_layout.setContentsMargins(12, 12, 12, 12)
 
-        tabs = QTabWidget()
-        root_layout.addWidget(tabs)
+        self.tabs = QTabWidget()
+        root_layout.addWidget(self.tabs)
 
         input_tab = QWidget()
-        tabs.addTab(input_tab, "ზომები")
+        self.tabs.addTab(input_tab, "ზომები")
 
-        tabs.addTab(QWidget(), "განლაგება")
-        tabs.addTab(QWidget(), "ისტორია")
+        self.tabs.addTab(QWidget(), "განლაგება")
+        
+        history_tab = QWidget()
+        history_layout = QVBoxLayout(history_tab)
+        self.history_panel = HistoryPanel(self.settings)
+        history_layout.addWidget(self.history_panel)
+        self.tabs.addTab(history_tab, "ისტორია")
 
         input_layout = QVBoxLayout(input_tab)
 
@@ -84,6 +121,11 @@ class MainWindow(QMainWindow):
         # seed initial material list (may be empty until load_saved runs)
         self.project_panel.update_material_options(self.sheets_panel.get_sheets())
         splitter.addWidget(self.project_panel)
+        
+        # wire history panel to load projects
+        self.history_panel.project_load_requested.connect(self._on_project_load_requested)
+        # refresh history when project is saved
+        self.project_panel.project_saved.connect(lambda _: self.history_panel.refresh())
 
 
 def load_stylesheet(app):

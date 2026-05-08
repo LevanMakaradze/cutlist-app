@@ -85,6 +85,9 @@ class ProjectPanel(QGroupBox):
 
         layout.addLayout(buttons)
     
+    def has_unsaved_changes(self) -> bool:
+        return self._dirty
+
     def _on_clear_all(self):
         reply = QMessageBox.question(
             self,
@@ -161,6 +164,10 @@ class ProjectPanel(QGroupBox):
         self.material_combo.setCheckedItems(names)
         self.table.set_data(state.get("parts", []))
         self._dirty = False
+
+    def load_project(self, data: dict):
+        """Load a project from history into the panel."""
+        self._restore(data)
 
     def get_project_data(self) -> dict:
         return {

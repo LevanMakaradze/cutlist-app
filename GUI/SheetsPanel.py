@@ -157,4 +157,43 @@ class SheetsPanel(QGroupBox):
                 result.append({"name": name, "length": l, "width": w, "qty": r.get("რაოდენობა", "")})
         return result
 
-        
+    def merge_sheets(self, incoming: list[dict]):
+        """
+        For each sheet {name, length, width, qty}:
+        - find a matching row by name+length+width and update its qty
+        - if no match is found, append it as a new row at the bottom
+        """
+        current = self.table.get_data()
+
+        for sheet in incoming:
+            found = False
+            for row in current:
+                if (row.get("სახელი", "") == sheet.get("name", "") and
+                        row.get("სიგრძე", "") == str(sheet.get("length", "")) and
+                        row.get("სიგანე", "") == str(sheet.get("width", ""))):
+                    row["რაოდენობა"] = str(sheet.get("qty", ""))
+                    found = True
+                    break
+            if not found:
+                current.append({
+                    "სახელი":    sheet.get("name", ""),
+                    "სიგრძე":    str(sheet.get("length", "")),
+                    "სიგანე":    str(sheet.get("width", "")),
+                    "რაოდენობა": str(sheet.get("qty", "")),
+                })
+
+        self.table.set_data(current)
+
+        try:
+            self.storage.save_sheets(current)
+        except Exception as e:
+            QMessageBox.critical(self, "შეცდომა შენახვისას", str(e))
+            return
+
+        self._saved_data = current
+        self._dirty = False
+        try:
+            self.sheets_changed.emit(self.get_sheets())
+        except Exception:
+            pass
+            

@@ -380,3 +380,35 @@ QPushButton#textureToggleButton:hover {
 QPushButton#textureToggleButton:pressed {
     background: #c7d2fe;
 }
+
+/* HISTORY TAB BUTTONS */
+
+#historyLoadButton {
+    background-color: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    min-height: 0;
+}
+#historyLoadButton:hover {
+    background-color: #388e3c;
+}
+#historyLoadButton:pressed {
+    background-color: #1b5e20;
+}
+
+#historyDeleteButton {
+    background-color: #c62828;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    min-height: 0;
+}
+#historyDeleteButton:hover {
+    background-color: #d32f2f;
+}
+#historyDeleteButton:pressed {
+    background-color: #8e0000;
+}
