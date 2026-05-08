@@ -31,6 +31,8 @@ class MainWindow(QMainWindow):
         self.settings = settings
         self.create_menu()
         self.create_ui()
+        self.sheets_panel.load_saved(warn_if_dirty=False)
+        self._apply_unit(self.settings.get("units", "mm"))
         
         self.showMaximized()
 
@@ -40,7 +42,15 @@ class MainWindow(QMainWindow):
 
     def _open_settings(self):
         dlg = SettingsDialog(self.settings, self)
-        dlg.exec()
+        dlg.register_unit_callback(self._apply_unit)
+        if dlg.exec():
+            pass
+        else:
+            self._apply_unit(self.settings.get("units", "mm"))
+
+    def _apply_unit(self, unit: str):
+        self.sheets_panel.set_unit(unit)
+        self.project_panel.set_unit(unit)
 
     def create_ui(self):
         central_widget = QWidget()
@@ -65,11 +75,12 @@ class MainWindow(QMainWindow):
 
         input_layout.addWidget(splitter)
         
-        sheets_panel = SheetsPanel()
-        sheets_panel.setFixedWidth(500)
-        splitter.addWidget(sheets_panel)
+        self.sheets_panel = SheetsPanel(self.settings)
+        self.sheets_panel.setFixedWidth(500)
+        splitter.addWidget(self.sheets_panel)
 
-        splitter.addWidget(ProjectPanel())
+        self.project_panel = ProjectPanel()
+        splitter.addWidget(self.project_panel)
 
 
 def load_stylesheet(app):

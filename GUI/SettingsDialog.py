@@ -78,10 +78,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(title)
 
         self.unit_combo = QComboBox()
-        self.unit_combo.addItem("მილიმეტრი (მმ)", "მმ")
-        self.unit_combo.addItem("სანტიმეტრი (სმ)", "სმ")
+        self.unit_combo.addItem("მილიმეტრი (მმ)", "mm")
+        self.unit_combo.addItem("სანტიმეტრი (სმ)", "cm")
         self.unit_combo.setMaximumWidth(240)
-        self.unit_combo.currentIndexChanged.connect(self._on_unit_changed)
         layout.addWidget(self.unit_combo)
         layout.addStretch()
         return page
@@ -93,7 +92,7 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        title = QLabel("ხერხის სიგანე")
+        title = QLabel("ხერხის სისქე")
         title.setObjectName("settingsPageTitle")
         layout.addWidget(title)
 
@@ -150,12 +149,13 @@ class SettingsDialog(QDialog):
             "kerf":           self.kerf_spin.value(),
             "data_directory": self.dir_edit.text(),
         })
-        self.accept()
-
-    def _on_unit_changed(self):
-        unit = self.unit_combo.currentData()
         for cb in self._unit_change_callbacks:
             cb(unit)
+        self.accept()
+
+    def register_unit_callback(self, callback):
+        if callback not in self._unit_change_callbacks:
+            self._unit_change_callbacks.append(callback)
 
     def _browse(self):
         path = QFileDialog.getExistingDirectory(

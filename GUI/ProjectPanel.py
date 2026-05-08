@@ -66,16 +66,13 @@ class ProjectPanel(QGroupBox):
         buttons = QHBoxLayout()
         self.clear_btn  = QPushButton("გასუფთავება")
         self.save_btn   = QPushButton("შენახვა")
-        self.cancel_btn = QPushButton("გაუქმება")
-        self.cancel_btn.setEnabled(False)
 
         self.clear_btn.clicked.connect(self._on_clear_all)
-        # todo: save and cancel button connects
+        # todo: save button connects
         
         buttons.addWidget(self.clear_btn)
         buttons.addStretch()
         buttons.addWidget(self.save_btn)
-        buttons.addWidget(self.cancel_btn)
 
         layout.addLayout(buttons)
     

@@ -13,7 +13,7 @@ class Storage:
     """
     Storage handles reading/writing projects and sheets to directory.
     
-    Projects and sheets are saved as JSON in settings.data_directory.
+    Projects and sheets are saved as JSON in settings.app_dir.
     """
     def __init__(self, settings_manager):
         self.settings = settings_manager
@@ -22,7 +22,7 @@ class Storage:
     
     @property
     def _sheets_file(self) -> Path:
-        return self.settings.data_directory / "sheets.json"
+        return self.settings.app_dir / "sheets.json"
 
     def save_sheets(self, sheets: list):
         with open(self._sheets_file, "w", encoding="utf-8") as f:
@@ -36,7 +36,6 @@ class Storage:
                 return json.load(f)
         except Exception:
             return []
-
 
     # projects
 
