@@ -1,4 +1,10 @@
 import sys
+from pathlib import Path
+
+# Add root folder to sys.path to allow imports from root directory under all execution contexts
+root_dir = Path(__file__).resolve().parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -25,6 +31,8 @@ from ProjectPanel import ProjectPanel
 from HistoryPanel import HistoryPanel
 from SettingsDialog import SettingsDialog
 from SettingsManager import SettingsManager
+from LayoutPanel import LayoutPanel
+
 
 class MainWindow(QMainWindow):
     def __init__(self, settings: SettingsManager):
@@ -54,6 +62,8 @@ class MainWindow(QMainWindow):
         self.sheets_panel.set_unit(unit)
         self.project_panel.set_unit(unit)
         self.history_panel.set_unit(unit)
+        if hasattr(self, "layout_panel"):
+            self.layout_panel.set_unit(unit)
 
     def _on_project_load_requested(self, data: dict):
         """Handle loading a project from history."""
@@ -84,6 +94,11 @@ class MainWindow(QMainWindow):
         self.project_panel.load_project(data)
         self.tabs.setCurrentIndex(0)
 
+    def _on_generate_layout_triggered(self):
+        """Switches the view to the Layout tab and triggers calculations safely."""
+        self.tabs.setCurrentIndex(1)
+        self.layout_panel.run_calculation()
+
     def create_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -97,7 +112,13 @@ class MainWindow(QMainWindow):
         input_tab = QWidget()
         self.tabs.addTab(input_tab, "ზომები")
 
-        self.tabs.addTab(QWidget(), "განლაგება")
+        self.sheets_panel = SheetsPanel(self.settings)
+        self.sheets_panel.setFixedWidth(500)
+        
+        self.project_panel = ProjectPanel(self.settings)
+        
+        self.layout_panel = LayoutPanel(self.settings, self.project_panel, self.sheets_panel, self)
+        self.tabs.addTab(self.layout_panel, "განლაგება")
         
         history_tab = QWidget()
         history_layout = QVBoxLayout(history_tab)
@@ -111,26 +132,33 @@ class MainWindow(QMainWindow):
         splitter.setChildrenCollapsible(False)
 
         input_layout.addWidget(splitter)
-        
-        self.sheets_panel = SheetsPanel(self.settings)
-        self.sheets_panel.setFixedWidth(500)
         splitter.addWidget(self.sheets_panel)
-        # wire project panel and material updates
-        self.project_panel = ProjectPanel(self.settings)
+        
         self.sheets_panel.sheets_changed.connect(self.project_panel.update_material_options)
-        # seed initial material list (may be empty until load_saved runs)
         self.project_panel.update_material_options(self.sheets_panel.get_sheets())
         splitter.addWidget(self.project_panel)
         
-        # wire history panel to load projects
+        self.project_panel.generate_btn.clicked.connect(self._on_generate_layout_triggered)
+        
         self.history_panel.project_load_requested.connect(self._on_project_load_requested)
-        # refresh history when project is saved
         self.project_panel.project_saved.connect(lambda _: self.history_panel.refresh())
 
 
 def load_stylesheet(app):
-    with open("style.qss", "r", encoding="utf-8") as file:
-        app.setStyleSheet(file.read())
+    dir_path = Path(__file__).resolve().parent
+    style_path = dir_path / "style.qss"
+    layout_style_path = dir_path / "style_layout.qss"
+
+    stylesheet_content = ""
+    if style_path.exists():
+        with open(style_path, "r", encoding="utf-8") as file:
+            stylesheet_content += file.read() + "\n"
+    if layout_style_path.exists():
+        with open(layout_style_path, "r", encoding="utf-8") as file:
+            stylesheet_content += file.read() + "\n"
+
+    if stylesheet_content:
+        app.setStyleSheet(stylesheet_content)
 
 
 if __name__ == "__main__":
