@@ -21,7 +21,7 @@ class TableDelegate(QStyledItemDelegate):
         super().__init__(table_widget)
         self.owner = table_widget
 
-    def createEditor(self, parent,option, index):
+    def createEditor(self, parent, option, index):
         col_type = self.owner.columns[index.column()][1]
 
         if col_type == "check":
@@ -56,7 +56,6 @@ class CustomTable(QWidget):
 
     def __init__(self, columns):
         super().__init__()
-
         self.columns = columns
         self._unit = "mm"
         self.updating = False
@@ -67,13 +66,8 @@ class CustomTable(QWidget):
         self.table.setHorizontalHeaderLabels(
             [name for name, _ in columns] + [""]
         )
-
         self.table.verticalHeader().setDefaultSectionSize(32)
-
-        self.table.setSelectionBehavior(
-            QAbstractItemView.SelectRows
-        )
-
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(
             QAbstractItemView.DoubleClicked
             | QAbstractItemView.SelectedClicked
@@ -81,33 +75,20 @@ class CustomTable(QWidget):
         )
 
         header = self.table.horizontalHeader()
-
         for i in range(len(columns)):
             header.setSectionResizeMode(i, QHeaderView.Stretch)
-
-        header.setSectionResizeMode(
-            len(columns),
-            QHeaderView.Fixed,
-        )
-
+        header.setSectionResizeMode(len(columns), QHeaderView.Fixed)
         self.table.setColumnWidth(len(columns), 36)
 
-        self.table.setItemDelegate(
-            TableDelegate(self)
-        )
-
+        self.table.setItemDelegate(TableDelegate(self))
         layout.addWidget(self.table)
 
         self._refresh_headers()
         self.add_rows(INITIAL_ROWS)
-
-        self.table.itemChanged.connect(
-            self.on_item_changed
-        )
+        self.table.itemChanged.connect(self.on_item_changed)
 
     def add_rows(self, count):
         self.updating = True
-
         for _ in range(count):
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -117,12 +98,7 @@ class CustomTable(QWidget):
             btn.setFixedSize(28, 28)
             btn.setObjectName("rowClearButton")
             btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
-            self.table.setCellWidget(
-                row,
-                len(self.columns),
-                btn,
-            )
-
+            self.table.setCellWidget(row, len(self.columns), btn)
         self.updating = False
 
     def _setup_row(self, row):
@@ -149,57 +125,45 @@ class CustomTable(QWidget):
     def row_has_data(self, row):
         for col, (_, col_type) in enumerate(self.columns):
             item = self.table.item(row, col)
-
             if not item:
                 continue
-
             if col_type == "check":
                 if item.checkState() == Qt.Checked:
                     return True
             else:
                 if item.text().strip():
                     return True
-
         return False
 
     def on_item_changed(self, item):
         if self.updating:
             return
-
         self.modified.emit()
-
         last = self.table.rowCount() - 1
-
         if item.row() == last and self.row_has_data(last):
             self.add_rows(ROW_GROW)
 
     def clear_row(self, row):
         self.updating = True
-
         for col, (_, col_type) in enumerate(self.columns):
             item = self.table.item(row, col)
-
             if not item:
                 continue
-
             if col_type == "check":
                 item.setCheckState(Qt.Unchecked)
             else:
                 item.setText("")
-
         self.updating = False
         self.modified.emit()
-    
+
     def clear_all(self):
-        """Clear all rows"""
         self.updating = True
         self.table.setRowCount(0)
         self.updating = False
         self.modified.emit()
         self.add_rows(INITIAL_ROWS)
-   
+
     def set_unit(self, unit: str):
-        """Switch display unit without changing the stored mm values."""
         if unit == self._unit:
             return
         old_unit = self._unit
@@ -236,9 +200,8 @@ class CustomTable(QWidget):
                 headers.append(name)
         headers.append("")
         self.table.setHorizontalHeaderLabels(headers)
-    
+
     def get_data(self) -> list[dict]:
-        """ returns data always in mm."""
         result = []
         for row in range(self.table.rowCount()):
             row_data = {}
@@ -246,7 +209,9 @@ class CustomTable(QWidget):
             for col, (name, col_type) in enumerate(self.columns):
                 item = self.table.item(row, col)
                 if col_type == "check":
-                    row_data[name] = bool(item and item.checkState() == Qt.Checked)
+                    row_data[name] = bool(
+                        item and item.checkState() == Qt.Checked
+                    )
                 elif col_type == "dim":
                     raw = item.text().strip() if item else ""
                     if raw:
@@ -265,11 +230,8 @@ class CustomTable(QWidget):
             if not empty:
                 result.append(row_data)
         return result
-    
+
     def set_data(self, data: list[dict]):
-        """
-        Load rows. Values for "dim" columns are expected in mm.(converted to cm if it is set)
-        """
         self.updating = True
         self.table.setRowCount(0)
         for row_data in data:
@@ -281,10 +243,18 @@ class CustomTable(QWidget):
                     item = self.table.item(row, col)
                     if item is None:
                         item = QTableWidgetItem()
-                        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable)
+                        item.setFlags(
+                            Qt.ItemIsEnabled
+                            | Qt.ItemIsUserCheckable
+                            | Qt.ItemIsSelectable
+                        )
                         item.setTextAlignment(Qt.AlignCenter)
                         self.table.setItem(row, col, item)
-                    item.setCheckState(Qt.Checked if row_data.get(name) else Qt.Unchecked)
+                    item.setCheckState(
+                        Qt.Checked
+                        if row_data.get(name)
+                        else Qt.Unchecked
+                    )
                 else:
                     raw = str(row_data.get(name, ""))
                     if col_type == "dim" and raw and self._unit == "cm":
@@ -293,14 +263,18 @@ class CustomTable(QWidget):
                         except ValueError:
                             pass
                     item = QTableWidgetItem(raw)
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
+                    item.setFlags(
+                        Qt.ItemIsSelectable
+                        | Qt.ItemIsEnabled
+                        | Qt.ItemIsEditable
+                    )
                     self.table.setItem(row, col, item)
             btn = QPushButton("×")
             btn.setFixedSize(28, 28)
             btn.setObjectName("rowClearButton")
             btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
             self.table.setCellWidget(row, len(self.columns), btn)
-        # trailing empty rows
+
         for _ in range(max(5, INITIAL_ROWS - len(data))):
             row = self.table.rowCount()
             self.table.insertRow(row)

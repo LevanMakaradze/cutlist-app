@@ -1,9 +1,9 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QGroupBox, QMessageBox,QVBoxLayout, QHBoxLayout,QPushButton,
+    QGroupBox, QMessageBox, QVBoxLayout, QHBoxLayout, QPushButton
 )
-from CustomTable import CustomTable
-from Storage import Storage
+from gui.widgets.custom_table import CustomTable
+from services.storage import Storage
 
 COLUMNS = [
     ("სახელი",    "text"),
@@ -12,11 +12,11 @@ COLUMNS = [
     ("რაოდენობა", "qty"),
 ]
 
+
 class SheetsPanel(QGroupBox):
     modified = Signal()
-    # emitted whenever sheet list changes so ProjectPanel can refresh its combo
-    sheets_changed = Signal(list)   # list of dicts with name/length/width
-    
+    sheets_changed = Signal(list)
+
     def __init__(self, settings_manager):
         super().__init__("მასალები")
         self.settings = settings_manager
@@ -30,7 +30,6 @@ class SheetsPanel(QGroupBox):
 
         self.table = CustomTable(COLUMNS)
         self.table.modified.connect(self._on_modified)
-
         layout.addWidget(self.table)
 
         buttons = QHBoxLayout()
@@ -47,11 +46,11 @@ class SheetsPanel(QGroupBox):
         buttons.addWidget(self.save_btn)
         buttons.addWidget(self.load_saved_btn)
         layout.addLayout(buttons)
-        
+
     def _on_modified(self):
         self._dirty = True
         self.modified.emit()
-        
+
     def _on_clear(self):
         reply = QMessageBox.question(
             self,
@@ -62,7 +61,7 @@ class SheetsPanel(QGroupBox):
         )
         if reply == QMessageBox.Yes:
             self.table.clear_all()
-        
+
     def load_saved(self, warn_if_dirty: bool = True):
         if warn_if_dirty and self._dirty:
             reply = QMessageBox.warning(
@@ -78,13 +77,14 @@ class SheetsPanel(QGroupBox):
         data = self.storage.load_sheets()
         if not data:
             if warn_if_dirty:
-                QMessageBox.information(self, "ჩატვირთვა", "შენახული მასალები არ არის.")
+                QMessageBox.information(
+                    self, "ჩატვირთვა", "შენახული მასალები არ არის."
+                )
             return False
 
         self.table.set_data(data)
         self._saved_data = data
         self._dirty = False
-        # notify project panel of updated sheets
         try:
             self.sheets_changed.emit(self.get_sheets())
         except Exception:
@@ -95,14 +95,12 @@ class SheetsPanel(QGroupBox):
         self.load_saved(warn_if_dirty=True)
 
     def _on_save(self):
-        data = self.table.get_data()   # values always in mm
-        # validate non-empty rows: name, length and width must be present and length/width non-zero
+        data = self.table.get_data()
         errors = []
         for i, r in enumerate(data, start=1):
             name = r.get("სახელი", "").strip()
             l = r.get("სიგრძე", "").strip()
             w = r.get("სიგანე", "").strip()
-            # determine if row is non-empty (any field present)
             if not (name or l or w or r.get("რაოდენობა", "")):
                 continue
             if not name:
@@ -129,24 +127,24 @@ class SheetsPanel(QGroupBox):
 
         try:
             self.storage.save_sheets(data)
-            QMessageBox.information(self,"შენახვა", "მასალები წარმატებით შენახულია.")
+            QMessageBox.information(
+                self, "შენახვა", "მასალები წარმატებით შენახულია."
+            )
         except Exception as e:
             QMessageBox.critical(self, "შეცდომა შენახვისას", str(e))
             return
-        
+
         self._saved_data = data
         self._dirty = False
-        # notify project panel of new materials
         try:
             self.sheets_changed.emit(self.get_sheets())
         except Exception:
             pass
-    
+
     def set_unit(self, unit: str):
         self.table.set_unit(unit)
 
     def get_sheets(self) -> list[dict]:
-        """Return only rows that have name AND at least one dimension, in mm."""
         rows = self.table.get_data()
         result = []
         for r in rows:
@@ -154,33 +152,39 @@ class SheetsPanel(QGroupBox):
             l = r.get("სიგრძე", "").strip()
             w = r.get("სიგანე", "").strip()
             if name or l or w:
-                result.append({"name": name, "length": l, "width": w, "qty": r.get("რაოდენობა", "")})
+                result.append(
+                    {
+                        "name": name,
+                        "length": l,
+                        "width": w,
+                        "qty": r.get("რაოდენობა", ""),
+                    }
+                )
         return result
 
     def merge_sheets(self, incoming: list[dict]):
-        """
-        For each sheet {name, length, width, qty}:
-        - find a matching row by name+length+width and update its qty
-        - if no match is found, append it as a new row at the bottom
-        """
         current = self.table.get_data()
 
         for sheet in incoming:
             found = False
             for row in current:
-                if (row.get("სახელი", "") == sheet.get("name", "") and
-                        row.get("სიგრძე", "") == str(sheet.get("length", "")) and
-                        row.get("სიგანე", "") == str(sheet.get("width", ""))):
+                if (
+                    row.get("სახელი", "") == sheet.get("name", "")
+                    and row.get("სიგრძე", "") == str(sheet.get("length", ""))
+                    and row.get("სიგანე", "") == str(sheet.get("width", ""))
+                ):
                     row["რაოდენობა"] = str(sheet.get("qty", ""))
                     found = True
                     break
             if not found:
-                current.append({
-                    "სახელი":    sheet.get("name", ""),
-                    "სიგრძე":    str(sheet.get("length", "")),
-                    "სიგანე":    str(sheet.get("width", "")),
-                    "რაოდენობა": str(sheet.get("qty", "")),
-                })
+                current.append(
+                    {
+                        "სახელი": sheet.get("name", ""),
+                        "სიგრძე": str(sheet.get("length", "")),
+                        "სიგანე": str(sheet.get("width", "")),
+                        "რაოდენობა": str(sheet.get("qty", "")),
+                    }
+                )
 
         self.table.set_data(current)
 
@@ -196,4 +200,3 @@ class SheetsPanel(QGroupBox):
             self.sheets_changed.emit(self.get_sheets())
         except Exception:
             pass
-            

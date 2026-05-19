@@ -1,5 +1,14 @@
-from CutNode import CutNode
-from LayoutEngine import *
+from engine.cut_node import CutNode
+from engine.base_engine import LayoutEngine
+from engine.models import (
+    PartSpec,
+    PartInstance,
+    Placement,
+    SheetSpec,
+    LayoutResult,
+    expand_parts,
+    expand_sheets,
+)
 
 class GuillotineEngine(LayoutEngine):
     """

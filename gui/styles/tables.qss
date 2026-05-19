@@ -1,0 +1,87 @@
+/* TABLE CONTAINERS & GRIDLINES */
+
+QTableWidget {
+    background: white;
+    color: #202124;
+    border: 1px solid #dfe3ea;
+    gridline-color: #eceff4;
+    selection-background-color: #dbeafe;
+    selection-color: #202124;
+}
+
+QTableWidget::item {
+    padding: 2px 6px;
+    border: none;
+    color: #202124;
+    background: transparent;
+}
+
+QTableWidget::item:selected {
+    background: white;
+    color: #202124;
+}
+
+/* HEADERS */
+
+QHeaderView {
+    background: #f0f2f5;
+    border: none;
+}
+
+QHeaderView::section:horizontal {
+    background: #eaecf0;
+    color: #374151;
+    border: none;
+    border-bottom: 2px solid #d1d5db;
+    border-right: 1px solid #d1d5db;
+    padding: 5px 8px;
+    font-weight: 700;
+    font-size: 9pt;
+}
+
+QHeaderView::section:vertical {
+    background: #f5f6f8;
+    color: #6b7280;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid #d1d5db;
+    padding: 0 6px;
+    font-size: 8.5pt;
+    font-weight: 500;
+    min-width: 15px;
+    max-width: 22px;
+}
+
+/* ACTIVE CELL EDITORS */
+
+QTableWidget QLineEdit {
+    background: #ffffff;
+    color: #202124;
+    border: 1.5px solid #2563eb;
+    border-radius: 5px;
+    padding: 1px 5px;
+    margin: 0px;
+    min-height: 0;
+}
+
+/* ROW CLEAR UTILITY BUTTON */
+
+QPushButton#rowClearButton {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 5px;
+    min-height: 0;
+    padding: 0;
+    font-size: 13pt;
+    font-weight: 700;
+}
+
+QPushButton#rowClearButton:hover { 
+    background: #fecaca; 
+    border-color: #f87171; 
+}
+
+QPushButton#rowClearButton:pressed {
+     background: #fca5a5; 
+}

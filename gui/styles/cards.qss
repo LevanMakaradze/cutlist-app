@@ -1,0 +1,111 @@
+/* SCROLL AREA CONTAINER */
+
+#resultsScrollArea {
+    background-color: #f1f5f9;
+    border-radius: 8px;
+}
+
+#resultsContainer {
+    background-color: transparent;
+}
+
+/* BASE CARD DESIGN */
+
+#resultCard {
+    border-radius: 12px;
+}
+
+/* Green Tier (Best / Recommended) */
+#resultCard[tier="green"] {
+    background-color: #f0fdf4;
+    border: 2px solid #22c55e;
+}
+#resultCard[tier="green"]:hover {
+    background-color: #dcfce7;
+}
+QLabel#resultCardAlgo[tier="green"] {
+    color: #15803d;
+}
+QLabel#resultCardBadge[tier="green"] {
+    background-color: #22c55e;
+}
+QFrame#resultCardLine[tier="green"] {
+    background-color: #22c55e;
+}
+
+/* Yellow Tier (Medium) */
+#resultCard[tier="yellow"] {
+    background-color: #fefce8;
+    border: 2px solid #eab308;
+}
+#resultCard[tier="yellow"]:hover {
+    background-color: #fef9c3;
+}
+QLabel#resultCardAlgo[tier="yellow"] {
+    color: #a16207;
+}
+QLabel#resultCardBadge[tier="yellow"] {
+    background-color: #eab308;
+}
+QFrame#resultCardLine[tier="yellow"] {
+    background-color: #eab308;
+}
+
+/* Red Tier (Not Recommended) */
+#resultCard[tier="red"] {
+    background-color: #fef2f2;
+    border: 2px solid #ef4444;
+}
+#resultCard[tier="red"]:hover {
+    background-color: #fee2e2;
+}
+QLabel#resultCardAlgo[tier="red"] {
+    color: #b91c1c;
+}
+QLabel#resultCardBadge[tier="red"] {
+    background-color: #ef4444;
+}
+QFrame#resultCardLine[tier="red"] {
+    background-color: #ef4444;
+}
+
+/* CARD DETAILS */
+
+QLabel#resultCardAlgo {
+    font-size: 10.5pt;
+    font-weight: bold;
+    background: transparent;
+}
+
+QLabel#resultCardBadge {
+    color: white;
+    font-size: 8pt;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+QFrame#resultCardLine {
+    max-height: 1px;
+    border: none;
+}
+
+QLabel#resultCardStatLabel {
+    color: #475569;
+    font-size: 9.5pt;
+    background: transparent;
+}
+
+QLabel#resultCardStatValue {
+    font-weight: bold;
+    color: #1e293b;
+    font-size: 9.5pt;
+    background: transparent;
+}
+
+QLabel#resultCardAction {
+    color: #64748b;
+    font-size: 8.5pt;
+    font-style: italic;
+    background: transparent;
+}

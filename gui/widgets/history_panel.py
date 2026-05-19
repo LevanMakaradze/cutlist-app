@@ -1,31 +1,24 @@
 from pathlib import Path
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QVBoxLayout, QHBoxLayout, QTableWidget,
     QTableWidgetItem, QPushButton, QHeaderView, QMessageBox,
     QAbstractItemView, QWidget
 )
-
-from Storage import Storage
+from services.storage import Storage
 
 COLUMNS = ["სახელი", "დეტალების რაოდენობა", "მასალები", "შენახვის დრო", ""]
 ACTION_COL = 4
 
 
 class HistoryPanel(QGroupBox):
-    """
-    Lists every saved project file with basic info.
-    """
-
-    # emitted when user clicks load; payload = full project dict
     project_load_requested = Signal(dict)
 
     def __init__(self, settings_manager):
         super().__init__("შენახული პროექტები")
         self.settings = settings_manager
         self.storage = Storage(settings_manager)
-        self._entries = []   # list of (Path, dict) tuples, parallel to rows
+        self._entries = []
         self._create_ui()
         self.refresh()
 
@@ -55,7 +48,9 @@ class HistoryPanel(QGroupBox):
         self.table.setColumnWidth(3, 160)
         self.table.setColumnWidth(ACTION_COL, 200)
 
-        table_width = sum(self.table.columnWidth(c) for c in range(len(COLUMNS))) + 20
+        table_width = (
+            sum(self.table.columnWidth(c) for c in range(len(COLUMNS))) + 20
+        )
         self.table.setFixedWidth(table_width)
 
         table_row = QHBoxLayout()
@@ -66,7 +61,6 @@ class HistoryPanel(QGroupBox):
         layout.addLayout(table_row)
 
     def refresh(self):
-        """Reload the list of saved projects from storage."""
         self._entries = []
         files = self.storage.list_projects()
 
@@ -77,25 +71,20 @@ class HistoryPanel(QGroupBox):
             except Exception:
                 continue
             if not isinstance(data, dict):
-                # skip malformed / unrelated json files in the projects folder
                 continue
             self._entries.append((file_path, data))
             try:
                 self._add_row(file_path, data)
             except Exception:
-                # never let one bad entry break the whole history list
                 continue
 
     def set_unit(self, unit: str):
-        """Placeholder for consistency with other panels. HistoryPanel does not need unit changes."""
         pass
 
     def load_project(self, data: dict):
-        """Load a project from history into the caller's panel (via signal)."""
         self.project_load_requested.emit(data)
 
     def _add_row(self, file_path: Path, data: dict):
-        """Add a row to the history table for a single project."""
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setRowHeight(row, 36)
@@ -120,7 +109,10 @@ class HistoryPanel(QGroupBox):
         if material_names:
             max_visible = 3
             if len(material_names) > max_visible:
-                display_text = ", ".join(material_names[:max_visible]) + f" +{len(material_names) - max_visible}"
+                display_text = (
+                    ", ".join(material_names[:max_visible])
+                    + f" +{len(material_names) - max_visible}"
+                )
             else:
                 display_text = ", ".join(material_names)
             tooltip_text = ", ".join(material_names)
@@ -152,22 +144,24 @@ class HistoryPanel(QGroupBox):
 
         load_btn = QPushButton("ჩატვირთვა")
         load_btn.setObjectName("historyLoadButton")
-        load_btn.clicked.connect(lambda _, fp=file_path, d=data: self._on_load_clicked(fp, d))
+        load_btn.clicked.connect(
+            lambda _, fp=file_path, d=data: self._on_load_clicked(fp, d)
+        )
 
         delete_btn = QPushButton("წაშლა")
         delete_btn.setObjectName("historyDeleteButton")
-        delete_btn.clicked.connect(lambda _, fp=file_path: self._on_delete_clicked(fp))
+        delete_btn.clicked.connect(
+            lambda _, fp=file_path: self._on_delete_clicked(fp)
+        )
 
         action_layout.addWidget(load_btn)
         action_layout.addWidget(delete_btn)
         self.table.setCellWidget(row, ACTION_COL, action_widget)
 
     def _on_load_clicked(self, file_path: Path, data: dict):
-        """User clicked Load on a history row."""
         self.project_load_requested.emit(data)
 
     def _on_delete_clicked(self, file_path: Path):
-        """User clicked Delete on a history row."""
         reply = QMessageBox.question(
             self,
             "წაშლის დადასტურება",

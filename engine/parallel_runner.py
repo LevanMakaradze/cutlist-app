@@ -1,6 +1,6 @@
-from Models import PartSpec, SheetSpec, LayoutResult, LayoutResultCollection
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from GuillotineEngine import ALL_VARIANTS, GuillotineEngine
+from engine.models import PartSpec, SheetSpec, LayoutResult, LayoutResultCollection
+from engine.guillotine_engine import ALL_VARIANTS
 
 def _run_variant(args) -> LayoutResult:
     variant_class, parts, sheets, settings = args
@@ -22,8 +22,3 @@ def run_all_parallel(parts: list[PartSpec], sheets: list[SheetSpec], settings: d
                 print(f"  {variant.name} failed: {e}")
 
     return LayoutResultCollection(results)
-
-if __name__ == "__main__":
-    result_collection = run_all_parallel()
-    print(f"Total: {len(result_collection)}")
-    print(f"Best: {result_collection.best().algorithm}")

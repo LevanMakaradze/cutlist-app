@@ -1,13 +1,8 @@
-"""
-SettingsDialog – sidebar nav + stacked pages.
-Units page has a live combobox that converts the current unit display label
-(the actual saved unit is just "mm" or "cm"; no values are changed).
-"""
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QListWidget, QStackedWidget, QWidget,
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QComboBox, QDoubleSpinBox, QLineEdit, QFileDialog, QFrame,
+    QComboBox, QDoubleSpinBox, QLineEdit, QFileDialog, QFrame
 )
 
 
@@ -17,7 +12,7 @@ class SettingsDialog(QDialog):
         self.settings = settings_manager
         self._unit_change_callbacks: list = []
         self.setWindowTitle("პარამეტრები")
-        self.setFixedSize(700,450)
+        self.setFixedSize(700, 450)
         self._create_ui()
         self._load()
 
@@ -57,7 +52,7 @@ class SettingsDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.setContentsMargins(12, 10, 12, 0)
         btn_row.addStretch()
-        self.save_btn   = QPushButton("შენახვა")
+        self.save_btn = QPushButton("შენახვა")
         self.cancel_btn = QPushButton("გაუქმება")
         self.save_btn.clicked.connect(self._save)
         self.cancel_btn.clicked.connect(self.reject)
@@ -65,7 +60,6 @@ class SettingsDialog(QDialog):
         btn_row.addWidget(self.cancel_btn)
         root.addLayout(btn_row)
 
-    #pages
     def _page_units(self):
         page = QWidget()
         page.setObjectName("settingsPage")
@@ -121,7 +115,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(title)
 
         row = QHBoxLayout()
-        self.dir_edit  = QLineEdit()
+        self.dir_edit = QLineEdit()
         browse_btn = QPushButton("არჩევა…")
         browse_btn.setMaximumWidth(100)
         browse_btn.clicked.connect(self._browse)
@@ -133,8 +127,7 @@ class SettingsDialog(QDialog):
 
     def _load(self):
         unit = self.settings.get("units", "mm")
-        idx  = self.unit_combo.findData(unit)
-        # block the callback during load so panels don't fire twice
+        idx = self.unit_combo.findData(unit)
         self.unit_combo.blockSignals(True)
         self.unit_combo.setCurrentIndex(idx if idx >= 0 else 0)
         self.unit_combo.blockSignals(False)
@@ -144,11 +137,13 @@ class SettingsDialog(QDialog):
 
     def _save(self):
         unit = self.unit_combo.currentData()
-        self.settings.save({
-            "units":          unit,
-            "kerf":           self.kerf_spin.value(),
-            "data_directory": self.dir_edit.text(),
-        })
+        self.settings.save(
+            {
+                "units": unit,
+                "kerf": self.kerf_spin.value(),
+                "data_directory": self.dir_edit.text(),
+            }
+        )
         for cb in self._unit_change_callbacks:
             cb(unit)
         self.accept()

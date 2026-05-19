@@ -1,14 +1,10 @@
-import json
-from datetime import datetime
-from pathlib import Path
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
+    QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 )
-from CustomTable import CustomTable
-from CheckableComboBox import CheckableComboBox
-from Storage import Storage
+from gui.widgets.custom_table import CustomTable
+from gui.widgets.checkable_combo_box import CheckableComboBox
+from services.storage import Storage
 
 COLUMNS = [
     ("სახელი",    "text"),
@@ -17,6 +13,7 @@ COLUMNS = [
     ("რაოდენობა", "qty"),
     ("ბრუნვა", "check"),
 ]
+
 
 class ProjectPanel(QGroupBox):
     modified = Signal()
@@ -33,58 +30,52 @@ class ProjectPanel(QGroupBox):
     def _create_ui(self):
         layout = QVBoxLayout(self)
 
-        # header
         header = QHBoxLayout()
-        
         header.addWidget(QLabel("სახელი"))
         self.name_input = QLineEdit()
         self.name_input.setMinimumWidth(200)
         self.name_input.setMaximumWidth(250)
         header.addWidget(self.name_input)
-        
+
         header.addSpacing(20)
-        
         header.addWidget(QLabel("მასალა"))
         self.material_combo = CheckableComboBox()
         self.material_combo.setMinimumWidth(200)
         self.material_combo.setMaximumWidth(300)
-        self.material_combo.checkedItemsChanged.connect(lambda _: self._mark_dirty())
+        self.material_combo.checkedItemsChanged.connect(
+            lambda _: self._mark_dirty()
+        )
         header.addWidget(self.material_combo)
-        
-        header.addSpacing(20)
 
+        header.addSpacing(20)
         self.texture_btn = QPushButton("ბრუნვის გადამრთველი")
         self.texture_btn.setObjectName("textureToggleButton")
         self.texture_btn.setFixedWidth(200)
         header.addWidget(self.texture_btn)
-        
+
         header.addStretch()
-        
         self.generate_btn = QPushButton("ავტომატური განლაგება")
         self.generate_btn.setObjectName("generateButton")
         header.addWidget(self.generate_btn)
 
         layout.addLayout(header)
 
-        # table
         self.table = CustomTable(COLUMNS)
         self.table.modified.connect(self._mark_dirty)
         layout.addWidget(self.table)
 
-        # footer buttons
         buttons = QHBoxLayout()
         self.clear_btn = QPushButton("გასუფთავება")
         self.save_btn = QPushButton("შენახვა")
 
         self.clear_btn.clicked.connect(self._on_clear_all)
         self.save_btn.clicked.connect(self._on_save)
-        
+
         buttons.addWidget(self.clear_btn)
         buttons.addStretch()
         buttons.addWidget(self.save_btn)
-
         layout.addLayout(buttons)
-    
+
     def has_unsaved_changes(self) -> bool:
         return self._dirty
 
@@ -116,7 +107,12 @@ class ProjectPanel(QGroupBox):
         data = {
             "project_name": name,
             "sheets_used": [
-                {"name": s["name"], "length": s["length"], "width": s["width"], "qty": s.get("qty","")}
+                {
+                    "name": s["name"],
+                    "length": s["length"],
+                    "width": s["width"],
+                    "qty": s.get("qty", ""),
+                }
                 for s in self._get_selected_sheets()
             ],
             "parts": self.table.get_data(),
@@ -139,11 +135,9 @@ class ProjectPanel(QGroupBox):
         return True
 
     def _get_selected_sheets(self) -> list:
-        """Return sheet dicts for currently checked items in the combo."""
         checked_names = self.material_combo.checkedItems()
         result = []
         for name in checked_names:
-            # find in the combo's attached data
             for i in range(self.material_combo.model().rowCount()):
                 item = self.material_combo.model().item(i)
                 if item and item.text() == name:
@@ -151,7 +145,9 @@ class ProjectPanel(QGroupBox):
                     if data:
                         result.append(data)
                     else:
-                        result.append({"name": name, "length": "", "width": "", "qty": ""})
+                        result.append(
+                            {"name": name, "length": "", "width": "", "qty": ""}
+                        )
                     break
         return result
 
@@ -159,14 +155,13 @@ class ProjectPanel(QGroupBox):
         self.name_input.blockSignals(True)
         self.name_input.setText(state.get("project_name", ""))
         self.name_input.blockSignals(False)
-        # restore checked materials
+
         names = [s.get("name", "") for s in state.get("sheets_used", [])]
         self.material_combo.setCheckedItems(names)
         self.table.set_data(state.get("parts", []))
         self._dirty = False
 
     def load_project(self, data: dict):
-        """Load a project from history into the panel."""
         self._restore(data)
 
     def get_project_data(self) -> dict:
@@ -175,25 +170,19 @@ class ProjectPanel(QGroupBox):
             "sheets_used": self._get_selected_sheets(),
             "parts": self.table.get_data(),
         }
-    
+
     def set_unit(self, unit: str):
         self.table.set_unit(unit)
 
     def update_material_options(self, sheets: list[dict]):
-        """
-        Called by SheetsPanel whenever its data changes.
-        Preserves which items were checked. Only named sheets are shown.
-        """
         previously_checked = self.material_combo.checkedItems()
         self.material_combo.clearItems()
         for sheet in sheets:
             name = sheet.get("name", "").strip()
-            # only display named sheets in the combo
             if not name:
                 continue
             item_was_checked = name in previously_checked
             self.material_combo.addCheckItem(name, checked=item_was_checked)
-            # store full sheet data on the item
             idx = self.material_combo.model().rowCount() - 1
             model_item = self.material_combo.model().item(idx)
             if model_item:

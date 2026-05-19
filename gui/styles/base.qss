@@ -1,14 +1,9 @@
-/* GLOBAL */
-
-QWidget {
-    background: #fafafa;
-    color: #222222;
-    font-size: 10pt;
-}
+/* GLOBAL WRAPPERS & FONTS */
 
 QWidget {
     background: #f0f2f5;
     color: #202124;
+    font-size: 10pt;
 }
 
 QLabel {
@@ -16,7 +11,7 @@ QLabel {
     color: #202124;
 }
 
-/* MENUS */
+/* MENUS & ACTION BARS */
 
 QMenuBar {
     background: #ffffff;
@@ -48,7 +43,7 @@ QMenu::item:selected {
 }
 
 
-/* TABS */
+/* TAB NAVIGATION */
 
 QTabWidget::pane {
     border: 1px solid #dfe3ea;
@@ -69,7 +64,7 @@ QTabBar::tab:selected {
 }
 
 
-/* GROUP BOXES */
+/* CONTAINER BOXES */
 
 QGroupBox {
     background: white;
@@ -87,250 +82,7 @@ QGroupBox::title {
     background: white;
 }
 
-
-/* INPUTS */
-
-QLineEdit,
-QComboBox,
-QDoubleSpinBox {
-    background: white;
-    color: #202124;
-    border: 1px solid #cfd6df;
-    border-radius: 8px;
-    min-height: 30px;
-    padding-left: 10px;
-    selection-background-color: #dbeafe;
-    selection-color: #202124;
-}
-
-QLineEdit:focus,
-QComboBox:focus,
-QDoubleSpinBox {
-    border: 1.5px solid #2563eb;
-    outline: none;
-}
-
-QDoubleSpinBox::up-button,
-QDoubleSpinBox::down-button {
-    width: 25px;
-}
-
-QComboBox::drop-down {
-    width: 25px;
-}
-
-QComboBox QAbstractItemView {
-    background: white;
-    color: #202124;
-    selection-background-color: #e6f0ff;
-}
-
-
-/* TABLES */
-
-QTableWidget {
-    background: white;
-    color: #202124;
-    border: 1px solid #dfe3ea;
-    gridline-color: #eceff4;
-    selection-background-color: #dbeafe;
-    selection-color: #202124;
-}
-
-/* normal cell */
-QTableWidget::item {
-    padding: 2px 6px;
-    border: none;
-    color: #202124;
-    background: transparent;
-}
-
-/* selected row */
-QTableWidget::item:selected {
-    background: white;
-    color: #202124;
-}
-
-/* horizontal header */
-
-QHeaderView {
-    background: #f0f2f5;
-    border: none;
-}
-
-QHeaderView::section:horizontal {
-    background: #eaecf0;
-    color: #374151;
-    border: none;
-    border-bottom: 2px solid #d1d5db;
-    border-right: 1px solid #d1d5db;
-    padding: 5px 8px;
-    font-weight: 700;
-    font-size: 9pt;
-}
-
-/*vertical header (row numbers)*/
-
-QHeaderView::section:vertical {
-    background: #f5f6f8;
-    color: #6b7280;
-    border: none;
-    border-bottom: 1px solid #e5e7eb;
-    border-right: 1px solid #d1d5db;
-    padding: 0 6px;
-    font-size: 8.5pt;
-    font-weight: 500;
-    min-width: 15px;
-    max-width: 22px;
-}
-
-
-/* cell editor*/
-
-QTableWidget QLineEdit {
-    background: #ffffff;
-    color: #202124;
-    border: 1.5px solid #2563eb;
-    border-radius: 5px;
-    padding: 1px 5px;
-    margin: 0px;
-    min-height: 0;
-}
-
-QPushButton {
-    background: #ffffff;
-    color: #202124;
-    border: 1px solid #cfd6df;
-    border-radius: 7px;
-    min-height: 36px;
-    padding: 0 16px;
-    font-weight: 500;
-}
-
-QPushButton:hover {
-    background: #f3f6fa;
-    border-color: #a0aec0;
-}
-
-QPushButton:pressed {
-    background: #e9edf2;
-}
-
-QPushButton:disabled {
-    background: #f5f6f8;
-    color: #b0bac7;
-    border-color: #e5e7eb;
-}
-
-QPushButton#generateButton {
-    background: #2563eb;
-    color: white;
-    border: none;
-    font-weight: 600;
-    min-width: 160px;
-}
-
-QPushButton#generateButton:hover {
-    background: #1d4ed8;
-}
-
-QPushButton#generateButton:pressed {
-    background: #1742b8;
-}
-
-QPushButton#rowClearButton {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fca5a5;
-    border-radius: 5px;
-    min-height: 0;
-    padding: 0;
-    font-size: 13pt;
-    font-weight: 700;
-}
-
-QPushButton#rowClearButton:hover  { 
-    background: #fecaca; 
-    border-color: #f87171; 
-}
-QPushButton#rowClearButton:pressed {
-     background: #fca5a5; 
-}
-
-/* SETTINGS DIALOG */
-
-QDialog {
-    background: #ffffff;
-}
-
-QDialog QLabel {
-    background: transparent;
-    color: #202124;
-}
-
-QListWidget#settingsSidebar {
-    background: #f5f6f8;
-    border: none;
-    padding: 8px 0;
-    outline: none;
-    color: #374151;
-    font-size: 10pt;
-}
-
-QListWidget#settingsSidebar::item {
-    padding: 10px 18px;
-    color: #374151;
-    border-radius: 0;
-    background: transparent;
-}
-
-QListWidget#settingsSidebar::item:selected {
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-weight: 600;
-}
-
-QListWidget#settingsSidebar::item:hover:!selected {
-    background: #e9ecef;
-}
-
-QFrame#settingsDivider {
-    background: #dfe3ea;
-    max-width: 1px;
-    border: none;
-}
-
-QWidget#settingsPage {
-    background: #ffffff;
-}
-
-QWidget#settingsPage QLabel {
-    background: transparent;
-    color: #202124;
-}
-
-QLabel#settingsPageTitle {
-    font-weight: 700;
-    font-size: 11pt;
-    color: #202124;
-    background: transparent;
-}
-
-/* RADIO BUTTONS */
-
-QRadioButton {
-    background: transparent;
-    spacing: 8px;
-    color: #202124;
-    padding: 4px 0;
-}
-
-QRadioButton::indicator {
-    width: 16px;
-    height: 16px;
-}
-
-/* SPLITTER */
+/* WINDOW DIVISION SPLITTER */
 
 QSplitter::handle:horizontal {
     background: #dfe3ea;
@@ -341,7 +93,7 @@ QSplitter::handle:horizontal:hover {
     background: #93c5fd;
 }
 
-/* SCROLLBARS */
+/* SCROLLBAR COMPONENT DESIGN */
 
 QScrollBar:vertical {
     background: #f3f4f6;
@@ -361,54 +113,4 @@ QScrollBar:horizontal {
 QScrollBar::handle:horizontal {
     background: #c7ced8;
     border-radius: 6px;
-}
-
-/* ROTATE TOGGLE BUTTON */
-
-QPushButton#textureToggleButton {
-    background: #eef2ff;
-    color: #4338ca;
-    border: 1px solid #c7d2fe;
-    font-weight: 600;
-}
-
-QPushButton#textureToggleButton:hover {
-    background: #e0e7ff;
-    border-color: #a5b4fc;
-}
-
-QPushButton#textureToggleButton:pressed {
-    background: #c7d2fe;
-}
-
-/* HISTORY TAB BUTTONS */
-
-#historyLoadButton {
-    background-color: #2e7d32;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 10px;
-    min-height: 0;
-}
-#historyLoadButton:hover {
-    background-color: #388e3c;
-}
-#historyLoadButton:pressed {
-    background-color: #1b5e20;
-}
-
-#historyDeleteButton {
-    background-color: #c62828;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 4px 10px;
-    min-height: 0;
-}
-#historyDeleteButton:hover {
-    background-color: #d32f2f;
-}
-#historyDeleteButton:pressed {
-    background-color: #8e0000;
 }
