@@ -147,7 +147,7 @@ class SheetsPanel(QGroupBox):
     def get_sheets(self) -> list[dict]:
         rows = self.table.get_data()
         result = []
-        for r in rows:
+        for i, r in enumerate(rows, start=1):
             name = r.get("სახელი", "").strip()
             l = r.get("სიგრძე", "").strip()
             w = r.get("სიგანე", "").strip()

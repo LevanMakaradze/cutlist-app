@@ -65,7 +65,7 @@ class ResultCard(QFrame):
         )
         add_stat(1, "მასალის ათვისება:", f"{result.get_total_utilization():.1f}%")
         add_stat(
-            2, "გაუნაწილებელი დეტალების რაოდენობა:", f"{len(result.unplaced)}"
+            2, "გაუნაწილებელი დეტალების რაოდენობა:", f"{result.get_unplaced_count()}"
         )
         add_stat(
             3,

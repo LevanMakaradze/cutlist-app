@@ -91,7 +91,5 @@ class SheetVisualizer(QWidget):
                 painter.setPen(QColor("#0f172a"))
                 painter.setFont(QFont("Segoe UI", 8))
                 label = placement.part.get_label()
-                if placement.part.rotated:
-                    label += " R"
                 label += f"\n{self._fmt(placement.width)}x{self._fmt(placement.height)}"
                 painter.drawText(p_rect, Qt.AlignCenter, label)

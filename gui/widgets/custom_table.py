@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, Signal, QRegularExpression
+from PySide6.QtCore import Qt, Signal, QRegularExpression, QEvent
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QWidget,
@@ -16,6 +16,56 @@ INITIAL_ROWS = 25
 ROW_GROW = 5
 
 
+class ExcelTableWidget(QTableWidget):
+    def __init__(self, owner, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.owner = owner
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        text = event.text()
+
+        # Selection state: If Enter is pressed when NOT editing, switch directly into edit mode
+        if key in (Qt.Key_Return, Qt.Key_Enter):
+            curr = self.currentIndex()
+            if curr.isValid() and curr.column() < len(self.owner.columns):
+                col_type = self.owner.columns[curr.column()][1]
+                if col_type != "check":
+                    self.edit(curr)
+                    event.accept()
+                    return
+
+        # Selection state: Tab key commits and moves focus to the adjacent cell on the right
+        if key == Qt.Key_Tab:
+            curr = self.currentIndex()
+            if curr.isValid():
+                next_col = curr.column() + 1
+                if next_col < len(self.owner.columns):
+                    self.setCurrentIndex(self.model().index(curr.row(), next_col))
+                else:
+                    if curr.row() + 1 < self.rowCount():
+                        self.setCurrentIndex(self.model().index(curr.row() + 1, 0))
+                event.accept()
+                return
+
+        # Direct writing: Pressing a text key directly on a cell opens the editor instantly
+        if text and text.isprintable() and len(text) == 1:
+            if not (event.modifiers() & (Qt.ControlModifier | Qt.AltModifier)):
+                curr = self.currentIndex()
+                if curr.isValid() and curr.column() < len(self.owner.columns):
+                    col_type = self.owner.columns[curr.column()][1]
+                    if col_type != "check":
+                        self.edit(curr)
+                        editor = self.findChild(QLineEdit)
+                        if editor:
+                            editor.setText(text)
+                            editor.setCursorPosition(1)
+                        event.accept()
+                        return
+
+        super().keyPressEvent(event)
+
+
 class TableDelegate(QStyledItemDelegate):
     def __init__(self, table_widget):
         super().__init__(table_widget)
@@ -29,6 +79,7 @@ class TableDelegate(QStyledItemDelegate):
 
         editor = QLineEdit(parent)
         editor.setFrame(False)
+        editor.installEventFilter(self)
 
         if col_type == "qty":
             rx = QRegularExpression(r"^\d{0,6}$")
@@ -50,6 +101,43 @@ class TableDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         model.setData(index, editor.text())
 
+    def eventFilter(self, editor, event):
+        if event.type() == QEvent.KeyPress:
+            key = event.key()
+            
+            # Pressing Enter while editing commits changes and closes editor (remaining on current cell)
+            if key in (Qt.Key_Return, Qt.Key_Enter):
+                self.commitData.emit(editor)
+                self.closeEditor.emit(editor)
+                
+                table = self.owner.table
+                table.setFocus()
+                return True
+
+            # Pressing Tab while editing commits changes and transitions right
+            elif key == Qt.Key_Tab:
+                self.commitData.emit(editor)
+                self.closeEditor.emit(editor)
+                
+                table = self.owner.table
+                curr = table.currentIndex()
+                if curr.isValid():
+                    next_col = curr.column() + 1
+                    if next_col < len(self.owner.columns):
+                        table.setCurrentIndex(table.model().index(curr.row(), next_col))
+                    else:
+                        if curr.row() + 1 < table.rowCount():
+                            table.setCurrentIndex(table.model().index(curr.row() + 1, 0))
+                    table.setFocus()
+                return True
+
+            elif key == Qt.Key_Escape:
+                self.closeEditor.emit(editor)
+                self.owner.table.setFocus()
+                return True
+
+        return super().eventFilter(editor, event)
+
 
 class CustomTable(QWidget):
     modified = Signal()
@@ -61,23 +149,35 @@ class CustomTable(QWidget):
         self.updating = False
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        self.table = QTableWidget(0, len(columns) + 1)
+        # Initialize the custom arrow and focus-friendly Excel-smooth table widget
+        self.table = ExcelTableWidget(self, 0, len(columns) + 1)
         self.table.setHorizontalHeaderLabels(
             [name for name, _ in columns] + [""]
         )
         self.table.verticalHeader().setDefaultSectionSize(32)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        
+        # Enable cell-by-cell selection 
+        self.table.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(
             QAbstractItemView.DoubleClicked
             | QAbstractItemView.SelectedClicked
             | QAbstractItemView.AnyKeyPressed
         )
 
+        # Set checkbox column size style to be small and contents-fitting
         header = self.table.horizontalHeader()
         for i in range(len(columns)):
-            header.setSectionResizeMode(i, QHeaderView.Stretch)
+            col_type = columns[i][1]
+            if col_type == "check":
+                header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+            else:
+                header.setSectionResizeMode(i, QHeaderView.Stretch)
         header.setSectionResizeMode(len(columns), QHeaderView.Fixed)
+        rows = self.table.verticalHeader()
+        rows.setSectionResizeMode(QHeaderView.Fixed)
         self.table.setColumnWidth(len(columns), 36)
 
         self.table.setItemDelegate(TableDelegate(self))
@@ -97,7 +197,7 @@ class CustomTable(QWidget):
             btn = QPushButton("×")
             btn.setFixedSize(28, 28)
             btn.setObjectName("rowClearButton")
-            btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
+            btn.clicked.connect(self._on_clear_row_clicked)
             self.table.setCellWidget(row, len(self.columns), btn)
         self.updating = False
 
@@ -143,7 +243,17 @@ class CustomTable(QWidget):
         if item.row() == last and self.row_has_data(last):
             self.add_rows(ROW_GROW)
 
-    def clear_row(self, row):
+    def _on_clear_row_clicked(self):
+        button = self.sender()
+        if not button:
+            return
+        # Dynamically lookup widget row coordinate to ensure safety against shifts
+        for r in range(self.table.rowCount()):
+            if self.table.cellWidget(r, len(self.columns)) == button:
+                self.clear_row_at(r)
+                break
+
+    def clear_row_at(self, row):
         self.updating = True
         for col, (_, col_type) in enumerate(self.columns):
             item = self.table.item(row, col)
@@ -272,7 +382,7 @@ class CustomTable(QWidget):
             btn = QPushButton("×")
             btn.setFixedSize(28, 28)
             btn.setObjectName("rowClearButton")
-            btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
+            btn.clicked.connect(self._on_clear_row_clicked)
             self.table.setCellWidget(row, len(self.columns), btn)
 
         for _ in range(max(5, INITIAL_ROWS - len(data))):
@@ -282,6 +392,6 @@ class CustomTable(QWidget):
             btn = QPushButton("×")
             btn.setFixedSize(28, 28)
             btn.setObjectName("rowClearButton")
-            btn.clicked.connect(lambda checked=False, r=row: self.clear_row(r))
+            btn.clicked.connect(self._on_clear_row_clicked)
             self.table.setCellWidget(row, len(self.columns), btn)
         self.updating = False

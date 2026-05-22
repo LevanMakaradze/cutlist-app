@@ -82,10 +82,17 @@ class CheckableComboBox(QComboBox):
                 text = text[:35] + "…"
         else:
             text = self._placeholder
+        
         self.blockSignals(True)
         self.setEditable(True)
-        self.lineEdit().setReadOnly(True)
-        self.lineEdit().setText(text)
+        if self.lineEdit():
+            self.lineEdit().setReadOnly(True)
+            self.lineEdit().setText(text)
+            self.lineEdit().setCursorPosition(0)
+        
+        # Force the combobox back into unselected status when nothing is checked
+        if not checked:
+            self.setCurrentIndex(-1)
         self.blockSignals(False)
 
     def setPlaceholder(self, text: str):

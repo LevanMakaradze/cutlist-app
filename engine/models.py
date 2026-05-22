@@ -173,12 +173,9 @@ class SheetLayout:
         if node is None or node.is_leaf:
             return
 
-        if node.left is not None:
-            # determine cut direction from child position relative to parent
-            is_vertical = node.left.y == node.y  # child shares y means cut was vertical
-            # only record one direction per depth (parallel cuts = same direction)
+        if node.split_axis is not None:
             if depth not in cuts_by_depth:
-                cuts_by_depth[depth] = is_vertical
+                cuts_by_depth[depth] = node.split_axis
 
         self._traverse(node.left, depth + 1, cuts_by_depth)
         self._traverse(node.right, depth + 1, cuts_by_depth)
@@ -197,8 +194,38 @@ class LayoutResult:
         algorithm: str,
     ):
         self.sheets = sheets
-        self.unplaced = unplaced
         self.algorithm = algorithm
+
+        # Converts list of PartInstance to structured list of PartSpec with correct quantities
+        if unplaced and isinstance(unplaced[0], PartInstance):
+            self.unplaced = self._aggregate_unplaced(unplaced)
+        else:
+            self.unplaced = unplaced
+
+    def _aggregate_unplaced(self, unplaced_instances: list[PartInstance]) -> list[PartSpec]:
+        """Groups identical unplaced part instances into unified specs with quantities."""
+        counts = {}
+        for pi in unplaced_instances:
+            spec = pi.spec
+            key = (spec.name, spec.width, spec.height, spec.can_rotate)
+            if key not in counts:
+                counts[key] = {"spec": spec, "count": 0}
+            counts[key]["count"] += 1
+            
+        aggregated = []
+        for key, val in counts.items():
+            orig_spec = val["spec"]
+            aggregated.append(PartSpec(
+                name=orig_spec.name,
+                width=orig_spec.width,
+                height=orig_spec.height,
+                quantity=val["count"],
+                can_rotate=orig_spec.can_rotate
+            ))
+        return aggregated
+
+    def get_unplaced_count(self) -> int:
+        return sum(p.quantity for p in self.unplaced)
 
     def get_used_sheets(self):
         count = 0

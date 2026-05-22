@@ -64,7 +64,7 @@ class LayoutPanel(QWidget):
 
         top_bar.addStretch()
 
-        self.run_btn = QPushButton("გაშვება / განახლება")
+        self.run_btn = QPushButton("გამოთვლა")
         self.run_btn.setObjectName("generateButton")
         self.run_btn.clicked.connect(self.run_calculation)
         top_bar.addWidget(self.run_btn)
@@ -158,7 +158,7 @@ class LayoutPanel(QWidget):
         splitter.addWidget(left_container)
 
         self.sidebar = QWidget()
-        self.sidebar.setFixedWidth(320)
+        self.sidebar.setFixedWidth(300)
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(0, 0, 0, 0)
         sidebar_layout.setSpacing(12)
@@ -194,6 +194,8 @@ class LayoutPanel(QWidget):
         self.unplaced_scroll = QScrollArea()
         self.unplaced_scroll.setWidgetResizable(True)
         self.unplaced_scroll.setFrameShape(QFrame.NoFrame)
+        vs = self.unplaced_scroll.horizontalScrollBar()
+        vs.setVisible(False)
         self.unplaced_scroll_container = QWidget()
         self.unplaced_scroll_layout = QVBoxLayout(
             self.unplaced_scroll_container
@@ -216,7 +218,7 @@ class LayoutPanel(QWidget):
     def _show_placeholder(self):
         self._clear_layout(self.results_grid)
         lbl = QLabel(
-            "განლაგება არ არის გამოთვლილი.\n\nდააჭირეთ 'გაშვება / განახლება' შედეგების მისაღებად."
+            "ავტომატური განლაგება არ არის გამოთვლილი."
         )
         lbl.setStyleSheet("font-size: 11pt; color: #64748b; font-weight: 500;")
         lbl.setAlignment(Qt.AlignCenter)
@@ -233,15 +235,20 @@ class LayoutPanel(QWidget):
     def _get_parts_from_gui(self) -> list[PartSpec]:
         data = self.project_panel.table.get_data()
         parts = []
-        for p in data:
+        for idx, p in enumerate(data, start=1):
             name = p.get("სახელი", "").strip()
             l_str = p.get("სიგრძე", "").strip()
             w_str = p.get("სიგანე", "").strip()
             q_str = p.get("რაოდენობა", "").strip()
             locked = p.get("ბრუნვა", False)
 
-            if not name or not l_str or not w_str:
+            if not l_str or not w_str:
                 continue
+            
+            # Name is fully optional. Apply fallback if empty.
+            if not name:
+                name = f"დეტალი {idx}"
+                
             try:
                 length = float(l_str)
                 width = float(w_str)
@@ -307,6 +314,27 @@ class LayoutPanel(QWidget):
             )
             return
 
+        max_sheet_w = max(s.width for s in sheets)
+        max_sheet_h = max(s.height for s in sheets)
+        
+        oversized_parts = []
+        for p in parts:
+            fits_normal = p.width <= max_sheet_w and p.height <= max_sheet_h
+            fits_rotated = p.can_rotate and p.height <= max_sheet_w and p.width <= max_sheet_h
+            
+            if not fits_normal and not fits_rotated:
+                oversized_parts.append(f"• {p.name} ({p.width}x{p.height})")
+
+        if oversized_parts:
+            parts_str = "\n".join(oversized_parts)
+            QMessageBox.critical(
+                self,
+                "გამოთვლის შეცდომა",
+                f"შემდეგი დეტალები აღემატება ყველაზე დიდი არჩეული ფილის ზომას:\n\n{parts_str}\n\n"
+                f"შეცვალეთ დეტალების ზომები ან აირჩიეთ უფრო დიდი მასალა."
+            )
+            return
+
         self.run_btn.setEnabled(False)
         self.project_panel.generate_btn.setEnabled(False)
         self.stacked_widget.setCurrentIndex(1)
@@ -343,12 +371,12 @@ class LayoutPanel(QWidget):
         if not results:
             return "green"
 
-        unplaced_min = min(len(r.unplaced) for r in results)
-        if len(result.unplaced) > unplaced_min:
+        unplaced_min = min(r.get_unplaced_count() for r in results)
+        if result.get_unplaced_count() > unplaced_min:
             return "red"
 
         best_unplaced_results = [
-            r for r in results if len(r.unplaced) == unplaced_min
+            r for r in results if r.get_unplaced_count() == unplaced_min
         ]
         sheets_min = min(r.get_used_sheets() for r in best_unplaced_results)
 
@@ -429,8 +457,9 @@ class LayoutPanel(QWidget):
                 "QGroupBox::title { color: #ef4444; }"
             )
             for part in result.unplaced:
+                # Shows quantities clean instead of separate raw instances
                 part_lbl = QLabel(
-                    f"{part.get_label()} ({self._fmt_dim(part.width)} x {self._fmt_dim(part.height)})"
+                    f"{part.name} x{part.quantity} ({self._fmt_dim(part.width)} x {self._fmt_dim(part.height)})"
                 )
                 part_lbl.setObjectName("unplacedPartLabel")
                 self.unplaced_scroll_layout.addWidget(part_lbl)
@@ -438,7 +467,7 @@ class LayoutPanel(QWidget):
             self.unplaced_group.setStyleSheet(
                 "QGroupBox::title { color: #16a34a; }"
             )
-            ok_lbl = QLabel("ყველა დეტალი წარმატებით განლაგდა!  ✅")
+            ok_lbl = QLabel("ყველა დეტალი განლაგდა!")
             ok_lbl.setObjectName("allPlacedLabel")
             self.unplaced_scroll_layout.addWidget(ok_lbl)
 
@@ -458,7 +487,18 @@ class LayoutPanel(QWidget):
         self.stacked_widget.setCurrentIndex(0)
 
     def _on_export_clicked(self):
-        QMessageBox.information(self, "ექსპორტი", "მონაცემები ექსპორტირებულია.")
+        summary = []
+        if self.current_result:
+            r = self.current_result
+            diff = r.get_total_cut_difficulty()
+            summary.append(f"პროექტი: {self.project_panel.name_input.text().strip()}")
+            summary.append(f"ალგორითმი: {r.algorithm}")
+            summary.append(f"გამოყენებული ფილები: {r.get_used_sheets()} / {r.get_total_sheets()}")
+            summary.append(f"გაჭრების რაოდენობა: {diff.total_cuts}")
+            summary.append(f"გაუნაწილებელი დეტალები: {r.get_unplaced_count()}")
+        
+        info_text = "\n".join(summary) if summary else "მონაცემები არ არის."
+        QMessageBox.information(self, "ექსპორტი", f"შედეგების რეზიუმე:\n\n{info_text}")
 
     def set_unit(self, unit: str):
         self.unit = unit

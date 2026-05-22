@@ -11,7 +11,7 @@ COLUMNS = [
     ("სიგრძე",    "dim"),
     ("სიგანე",    "dim"),
     ("რაოდენობა", "qty"),
-    ("ბრუნვა", "check"),
+    ("ტექსტურა", "check"),
 ]
 
 
@@ -38,7 +38,7 @@ class ProjectPanel(QGroupBox):
         header.addWidget(self.name_input)
 
         header.addSpacing(20)
-        header.addWidget(QLabel("მასალა"))
+        header.addWidget(QLabel("მასალები"))
         self.material_combo = CheckableComboBox()
         self.material_combo.setMinimumWidth(200)
         self.material_combo.setMaximumWidth(300)
@@ -48,9 +48,10 @@ class ProjectPanel(QGroupBox):
         header.addWidget(self.material_combo)
 
         header.addSpacing(20)
-        self.texture_btn = QPushButton("ბრუნვის გადამრთველი")
+        self.texture_btn = QPushButton("ტექსტურის გადამრთველი")
         self.texture_btn.setObjectName("textureToggleButton")
-        self.texture_btn.setFixedWidth(200)
+        self.texture_btn.setFixedWidth(220)
+        self.texture_btn.clicked.connect(self._toggle_all_rotations)
         header.addWidget(self.texture_btn)
 
         header.addStretch()
@@ -78,6 +79,28 @@ class ProjectPanel(QGroupBox):
 
     def has_unsaved_changes(self) -> bool:
         return self._dirty
+
+    def _toggle_all_rotations(self):
+        table_widget = self.table.table
+        rows = table_widget.rowCount()
+        any_checked = False
+
+        for r in range(rows):
+            item = table_widget.item(r, 4)
+            if item and item.checkState() == Qt.Checked:
+                any_checked = True
+                break
+
+        target_state = Qt.Unchecked if any_checked else Qt.Checked
+
+        self.table.updating = True
+        for r in range(rows):
+            if self.table.row_has_data(r):
+                item = table_widget.item(r, 4)
+                if item:
+                    item.setCheckState(target_state)
+        self.table.updating = False
+        self._mark_dirty()
 
     def _on_clear_all(self):
         reply = QMessageBox.question(
@@ -181,6 +204,16 @@ class ProjectPanel(QGroupBox):
             name = sheet.get("name", "").strip()
             if not name:
                 continue
+
+            # Check quantity count. If 0, skip showing in drop-down list
+            qty_str = str(sheet.get("qty", "")).strip()
+            if qty_str:
+                try:
+                    if int(qty_str) <= 0:
+                        continue
+                except ValueError:
+                    pass
+
             item_was_checked = name in previously_checked
             self.material_combo.addCheckItem(name, checked=item_was_checked)
             idx = self.material_combo.model().rowCount() - 1

@@ -124,11 +124,13 @@ class GuillotineEngine(LayoutEngine):
         bottom_h = max(0.0, remaining_h - kerf) if remaining_h > kerf else 0.0
 
         if self._split_vertical(remaining_w, remaining_h):
+            node.split_axis = 'V'
             if right_w > 0:
                 node.left  = CutNode(node.x + part.width + kerf, node.y, right_w, node.height)
             if bottom_h > 0:
                 node.right = CutNode(node.x, node.y + part.height + kerf, part.width, bottom_h)
         else:
+            node.split_axis = 'H'
             if bottom_h > 0:
                 node.left  = CutNode(node.x, node.y + part.height + kerf, node.width, bottom_h)
             if right_w > 0:

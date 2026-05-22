@@ -1,87 +1,121 @@
 /* TABLE CONTAINERS & GRIDLINES */
 
 QTableWidget {
-    background: white;
-    color: #202124;
-    border: 1px solid #dfe3ea;
-    gridline-color: #eceff4;
-    selection-background-color: #dbeafe;
-    selection-color: #202124;
+    background-color: #ffffff;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    gridline-color: #e2e8f0;
+    selection-background-color: #eff6ff;
+    selection-color: #1e293b;
+    border-radius: 6px;
+    outline: none;
 }
 
 QTableWidget::item {
-    padding: 2px 6px;
+    padding: 4px;
     border: none;
-    color: #202124;
-    background: transparent;
+    color: #1e293b;
+}
+
+QTableWidget::item:focus {
+    outline: none;
+    border: none;
 }
 
 QTableWidget::item:selected {
-    background: white;
-    color: #202124;
+    background-color: #eff6ff;
+    color: #1e293b;
 }
 
 /* HEADERS */
 
 QHeaderView {
-    background: #f0f2f5;
+    background-color: #f8fafc;
     border: none;
 }
 
 QHeaderView::section:horizontal {
-    background: #eaecf0;
-    color: #374151;
+    background-color: #f1f5f9;
+    color: #475569;
     border: none;
-    border-bottom: 2px solid #d1d5db;
-    border-right: 1px solid #d1d5db;
-    padding: 5px 8px;
-    font-weight: 700;
-    font-size: 9pt;
+    border-bottom: 2px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    padding: 6px 8px;
+    font-weight: 600;
+    font-size: 9.5pt;
 }
 
 QHeaderView::section:vertical {
-    background: #f5f6f8;
-    color: #6b7280;
+    background-color: #f8fafc;
+    color: #64748b;
     border: none;
-    border-bottom: 1px solid #e5e7eb;
-    border-right: 1px solid #d1d5db;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #cbd5e1;
     padding: 0 6px;
     font-size: 8.5pt;
     font-weight: 500;
-    min-width: 15px;
-    max-width: 22px;
+    min-width: 18px;
 }
 
-/* ACTIVE CELL EDITORS */
+/* ACTIVE CELL EDITORS - Completely borderless when editing inside cell */
 
 QTableWidget QLineEdit {
-    background: #ffffff;
-    color: #202124;
-    border: 1.5px solid #2563eb;
-    border-radius: 5px;
-    padding: 1px 5px;
+    background-color: #ffffff;
+    color: #1e293b;
+    border: none;
+    border-radius: 0px;
+    padding: 0px;
     margin: 0px;
-    min-height: 0;
+    outline: none;
+    min-height: 0px;
 }
 
 /* ROW CLEAR UTILITY BUTTON */
 
 QPushButton#rowClearButton {
-    background: #fee2e2;
-    color: #b91c1c;
+    background-color: #fee2e2;
+    color: #ef4444;
     border: 1px solid #fca5a5;
-    border-radius: 5px;
+    border-radius: 4px;
     min-height: 0;
     padding: 0;
-    font-size: 13pt;
-    font-weight: 700;
+    font-size: 12pt;
+    font-weight: bold;
 }
 
 QPushButton#rowClearButton:hover { 
-    background: #fecaca; 
+    background-color: #fca5a5; 
     border-color: #f87171; 
 }
 
 QPushButton#rowClearButton:pressed {
-     background: #fca5a5; 
+     background-color: #f87171;
+     color: #ffffff;
+}
+
+/* CHECKBOX ALIGNMENT & DESIGN FOR ROTATION LOCK */
+
+QTableWidget::indicator {
+    subcontrol-origin: padding;
+    subcontrol-position: center;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+
+QTableWidget::indicator:hover {
+    border-color: #2563eb;
+    background-color: #f8fafc;
+}
+
+QTableWidget::indicator:checked {
+    border-color: #2563eb;
+    background-color: #2563eb;
+}
+
+QTableWidget::indicator:unchecked {
+    border-color: #cbd5e1;
+    background-color: #ffffff;
 }
