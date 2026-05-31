@@ -8,7 +8,7 @@ from engine.models import PartSpec, SheetSpec, LayoutResult
 from gui.widgets.layout.layout_worker import LayoutWorker
 from gui.widgets.layout.sheet_visualizer import SheetVisualizer
 from gui.widgets.layout.result_card import ResultCard
-
+from services.layout_exporter import export_layout_xml
 
 class LayoutPanel(QWidget):
     def __init__(
@@ -205,7 +205,7 @@ class LayoutPanel(QWidget):
         self.unplaced_scroll.setWidget(self.unplaced_scroll_container)
 
         self.unplaced_layout.addWidget(self.unplaced_scroll)
-        sidebar_layout.addWidget(self.unplaced_group)
+        sidebar_layout.addWidget(self.unplaced_group,1)
 
         self.export_btn = QPushButton("მონაცემების ექსპორტი")
         self.export_btn.setObjectName("generateButton")
@@ -368,46 +368,60 @@ class LayoutPanel(QWidget):
     def _get_result_tier(
         self, result: LayoutResult, results: list[LayoutResult]
     ) -> str:
-        if not results:
-            return "green"
-
-        unplaced_min = min(r.get_unplaced_count() for r in results)
-        if result.get_unplaced_count() > unplaced_min:
+        """
+        Returns Tier of result.
+        
+        "green" - 
+        "yellow" -
+        "red" - has unplaced part,
+        """
+        # Results with any unplaced parts are automatically flagged as red
+        if result.get_unplaced_count() > 0:
             return "red"
 
-        best_unplaced_results = [
-            r for r in results if r.get_unplaced_count() == unplaced_min
-        ]
-        sheets_min = min(r.get_used_sheets() for r in best_unplaced_results)
+        # Evaluate against results that successfully placed all parts
+        perfect_results = [r for r in results if r.get_unplaced_count() == 0]
+        if not perfect_results:
+            return "green"
 
+        sheets_min = min(r.get_used_sheets() for r in perfect_results)
+
+        # Penalize results utilizing excessive sheets
         if result.get_used_sheets() > sheets_min + 1:
             return "red"
         elif result.get_used_sheets() == sheets_min + 1:
             return "yellow"
         else:
-            best_with_sheets_min = [
-                r
-                for r in best_unplaced_results
-                if r.get_used_sheets() == sheets_min
+            # We are on the optimal sheet count; evaluate XML complexity ratios
+            best_at_min_sheets = [
+                r for r in perfect_results if r.get_used_sheets() == sheets_min
             ]
-            cuts_list = [
-                r.get_total_cut_difficulty().total_cuts
-                for r in best_with_sheets_min
-            ]
-            if not cuts_list:
-                return "green"
-            cuts_min = min(cuts_list)
-            cuts_max = max(cuts_list)
+            
+            # Find the absolute best XML counts achieved for the minimum sheet count
+            best_no_metrics = [r.get_xml_metrics()[0] for r in best_at_min_sheets]
+            best_part_metrics = [r.get_xml_metrics()[1] for r in best_at_min_sheets]
 
-            my_cuts = result.get_total_cut_difficulty().total_cuts
-            if cuts_max == cuts_min:
-                return "green"
+            no_min = min(best_no_metrics) if best_no_metrics else 1
+            part_min = min(best_part_metrics) if best_part_metrics else 1
 
-            threshold = cuts_min + 0.4 * (cuts_max - cuts_min)
-            if my_cuts <= threshold:
+            my_no, my_part = result.get_xml_metrics()
+
+            # Scaled Calculation for classification
+            # Green Limit: Base + Absolute Buffer of 3/5 + 10% of minimum
+            green_no_limit = no_min + 3 + (0.10 * no_min)
+            green_part_limit = part_min + 5 + (0.10 * part_min)
+
+            # Yellow Limit: Base + Absolute Buffer of 10/15 + 40% of minimum
+            yellow_no_limit = no_min + 10 + (0.40 * no_min)
+            yellow_part_limit = part_min + 15 + (0.40 * part_min)
+
+            # Classification
+            if my_no <= green_no_limit and my_part <= green_part_limit:
                 return "green"
-            else:
+            elif my_no <= yellow_no_limit and my_part <= yellow_part_limit:
                 return "yellow"
+            else:
+                return "red"
 
     def _populate_results(self, collection):
         self._clear_layout(self.results_grid)
@@ -435,21 +449,22 @@ class LayoutPanel(QWidget):
         self.details_title.setText(
             f"განლაგების დეტალები: {result.algorithm.upper()}"
         )
-
-        difficulty = result.get_total_cut_difficulty()
+        
         self.stat_algo.setText(f"<b>ალგორითმი:</b> {result.algorithm}")
         self.stat_sheets.setText(
             f"<b>გამოყენებული ფილები:</b> {result.get_used_sheets()} / {result.get_total_sheets()}"
         )
         self.stat_util.setText(
-            f"<b>ათვისების კოეფიციენტი:</b> {result.get_total_utilization():.1f}%"
+            f"<b>მასალის ათვისება:</b> {result.get_total_utilization():.1f}%"
         )
+        my_no, my_part = result.get_xml_metrics()
         self.stat_cuts.setText(
-            f"<b>გაჭრების რაოდენობა:</b> {difficulty.total_cuts}"
+            f"<b>ხელით განთავსება:</b> {my_no} ოპერაცია({my_part} გაჭრა)"
         )
         self.stat_turns.setText(
-            f"<b>მიმართულების ცვლილება:</b> {difficulty.direction_changes}"
+            f"<b>გაუნაწილებელი დეტალები:</b> {result.get_unplaced_count()} ცალი)"
         )
+        self.stat_turns.setVisible(False)
 
         self._clear_layout(self.unplaced_scroll_layout)
         if result.unplaced:
@@ -487,18 +502,26 @@ class LayoutPanel(QWidget):
         self.stacked_widget.setCurrentIndex(0)
 
     def _on_export_clicked(self):
-        summary = []
-        if self.current_result:
-            r = self.current_result
-            diff = r.get_total_cut_difficulty()
-            summary.append(f"პროექტი: {self.project_panel.name_input.text().strip()}")
-            summary.append(f"ალგორითმი: {r.algorithm}")
-            summary.append(f"გამოყენებული ფილები: {r.get_used_sheets()} / {r.get_total_sheets()}")
-            summary.append(f"გაჭრების რაოდენობა: {diff.total_cuts}")
-            summary.append(f"გაუნაწილებელი დეტალები: {r.get_unplaced_count()}")
-        
-        info_text = "\n".join(summary) if summary else "მონაცემები არ არის."
-        QMessageBox.information(self, "ექსპორტი", f"შედეგების რეზიუმე:\n\n{info_text}")
+        if not self.current_result:
+            QMessageBox.warning(
+                self, "გაფრთხილება", "ჯერ აირჩიეთ განლაგების ვარიანტი!"
+            )
+            return
+
+        from PySide6.QtWidgets import QFileDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "ექსპორტი XML", "", "XML ფაილები (*.xml)"
+        )
+        if file_path:
+            try:
+                export_layout_xml(self.current_result,self.settings.get("kerf"), file_path)
+                QMessageBox.information(
+                    self, "წარმატება", "მონაცემები წარმატებით გაექსპორტდა XML ფორმატში!"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "შეცდომა", f"ექსპორტი ვერ მოხერხდა: {str(e)}"
+                )
 
     def set_unit(self, unit: str):
         self.unit = unit

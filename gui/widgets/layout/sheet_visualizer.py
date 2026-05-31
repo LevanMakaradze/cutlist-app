@@ -38,12 +38,7 @@ class SheetVisualizer(QWidget):
         painter.setFont(font)
 
         difficulty = self.sheet_layout.get_cut_difficulty()
-        title = (
-            f"{sheet.name} #{self.sheet_layout.sheet_number} | "
-            f"cuts: {difficulty.total_cuts} | "
-            f"turns: {difficulty.direction_changes} | "
-            f"{self.sheet_layout.get_utilization():.1f}%"
-        )
+        title = f"{sheet.name} #{self.sheet_layout.sheet_number}"
         painter.drawText(int(dx), int(dy - 8), title)
 
         sheet_rect = QRectF(dx, dy, drawn_w, drawn_h)

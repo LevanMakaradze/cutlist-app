@@ -1,3 +1,6 @@
+import math
+
+
 class PartSpec:
     def __init__(
         self,
@@ -135,50 +138,24 @@ class SheetLayout:
     
     def get_cut_difficulty(self) -> CutDifficulty:
         """
-        Counts physical cutting difficulty by traversing the guillotine cut tree.
-
-        If same depth level cuts are parallel they are counted as a single pass.
-        A direction change means the sheet must be repositioned.
-
-        Returns a dict with:
-            total_cuts - total number of distinct cut passes
-            direction_changes - how many times cut direction flips between levels
-            cut_sequence - list of cut directions per depth, e.g. ['H', 'V', 'H']
+        Counts simple total guillotine cuts by traversing the split tree.
         """
         if self.root is None:
-            return CutDifficulty(0,0)
+            return CutDifficulty(0, 0)
 
-        cuts_by_depth: dict[int, bool] = {}
-        self._traverse(self.root, depth=0, cuts_by_depth=cuts_by_depth)
+        total_cuts = 0
 
-        if not cuts_by_depth:
-            return CutDifficulty(0,0)
+        def count_splits(node):
+            nonlocal total_cuts
+            if node is None or node.is_leaf:
+                return
+            if node.split_axis is not None:
+                total_cuts += 1
+            count_splits(node.left)
+            count_splits(node.right)
 
-        # build ordered sequence of cut directions by depth
-        cut_sequence = []
-        for depth in sorted(cuts_by_depth.keys()):
-            is_vertical = cuts_by_depth[depth]
-            cut_sequence.append("V" if is_vertical else "H")
-
-        # count direction changes between consecutive depths
-        direction_changes = 0
-        for i in range(1, len(cut_sequence)):
-            if cut_sequence[i] != cut_sequence[i - 1]:
-                direction_changes += 1
-
-        return CutDifficulty(len(cut_sequence), direction_changes)
-
-
-    def _traverse(self, node, depth: int, cuts_by_depth: dict):
-        if node is None or node.is_leaf:
-            return
-
-        if node.split_axis is not None:
-            if depth not in cuts_by_depth:
-                cuts_by_depth[depth] = node.split_axis
-
-        self._traverse(node.left, depth + 1, cuts_by_depth)
-        self._traverse(node.right, depth + 1, cuts_by_depth)
+        count_splits(self.root)
+        return CutDifficulty(total_cuts, 0)
         
     def __repr__(self):
         return (
@@ -201,6 +178,27 @@ class LayoutResult:
             self.unplaced = self._aggregate_unplaced(unplaced)
         else:
             self.unplaced = unplaced
+            
+        # Internal cache for complexity metrics
+        self._xml_no_count = None
+        self._xml_part_count = None
+    
+    def get_xml_metrics(self, kerf=4.4) -> tuple[int, int]:
+        """
+        Returns cached XML tree metrics: (no_elements_count, part_elements_count)
+        """
+        if self._xml_no_count is None or self._xml_part_count is None:
+            from services.layout_exporter import generate_xml_project_tree
+            try:
+                _, no_count, part_count = generate_xml_project_tree(self, kerf)
+                self._xml_no_count = no_count
+                self._xml_part_count = part_count
+            except Exception:
+                # Fallback defaults in case of unbuilt/empty sheets
+                self._xml_no_count = 999
+                self._xml_part_count = 999
+
+        return self._xml_no_count, self._xml_part_count
 
     def _aggregate_unplaced(self, unplaced_instances: list[PartInstance]) -> list[PartSpec]:
         """Groups identical unplaced part instances into unified specs with quantities."""
@@ -262,18 +260,30 @@ class LayoutResult:
 
         return (used_area / total_area) * 100.0
     
-    def get_total_cut_difficulty(self) -> dict:
-        total_cuts = 0
-        total_direction_changes = 0
-
+    def get_total_cut_difficulty(self) -> CutDifficulty:
+        """
+        Aggregates simple split cut counts across all sheets.
+        """
+        total_cuts = sum(sheet.get_cut_difficulty().total_cuts for sheet in self.sheets)
+        return CutDifficulty(total_cuts, 0)
+    
+    def get_remaining_quality_value(self) -> float:
+        """
+        Calculates a quality score for the remaining (unused) pieces. 
+        Favors fewer, larger pieces (using squared area) and square-like
+        shapes over long narrow stripes (using aspect ratio).
+        """
+        score = 0.0
         for sheet in self.sheets:
-            if not sheet.placements:
-                continue
-            difficulty = sheet.get_cut_difficulty()
-            total_cuts += difficulty.total_cuts
-            total_direction_changes += difficulty.direction_changes
-
-        return CutDifficulty(total_cuts,total_direction_changes)
+            for piece in sheet.remaining_parts:
+                area = piece.width * piece.height
+                if area <= 0:
+                    continue
+                # Aspect ratio is between 0.0 and 1.0 (1.0 being a perfect square)
+                aspect_ratio = min(piece.width, piece.height) / max(piece.width, piece.height)
+                # Squaring the area heavily penalizes splitting waste into smaller fragments
+                score += (area ** 2) * aspect_ratio
+        return score
     
     def __repr__(self):
         return f"Algorithm: {self.algorithm}\n Sheets: {self.sheets}\n Unplaced Parts: {self.unplaced}"
@@ -281,6 +291,7 @@ class LayoutResult:
 class LayoutResultCollection:
     def __init__(self, results: list[LayoutResult]):
         self.results = self._distinct(results)
+        self.results = self._filter_unplaced_if_perfect_exists(self.results)
         self.results = self._sort(self.results)
 
     def _distinct(self, results: list[LayoutResult]) -> list[LayoutResult]:
@@ -321,19 +332,71 @@ class LayoutResultCollection:
                 return False
 
         return True
+    
+    def _filter_unplaced_if_perfect_exists(self, results: list[LayoutResult]) -> list[LayoutResult]:
+        """
+        If there is at least one layout result where all parts are successfully placed,
+        filter out all other layout results containing unplaced parts.
+        """
+        has_perfect = any(r.get_unplaced_count() == 0 for r in results)
+        if has_perfect:
+            return [r for r in results if r.get_unplaced_count() == 0]
+        return results
 
     def _sort(self, results: list[LayoutResult]) -> list[LayoutResult]:
+        # 1. Pre-calculate the baseline minimum cuts/parts for each (unplaced, sheets) group
+        baselines = {}
+        for r in results:
+            key = (r.get_unplaced_count(), r.get_used_sheets())
+            no_val, part_val = r.get_xml_metrics()
+            if key not in baselines:
+                baselines[key] = {"no": [], "part": []}
+            baselines[key]["no"].append(no_val)
+            baselines[key]["part"].append(part_val)
+
+        baseline_mins = {
+            key: (min(data["no"]), min(data["part"]))
+            for key, data in baselines.items()
+        }
+
+        # 2. Helper to calculate dynamic sliding-scale tier value (0 = Green, 1 = Yellow, 2 = Red)
+        def get_tier_value(r: LayoutResult) -> int:
+            if r.get_unplaced_count() > 0:
+                return 2  # Always Red if parts are left over
+                
+            key = (r.get_unplaced_count(), r.get_used_sheets())
+            no_min, part_min = baseline_mins[key]
+            my_no, my_part = r.get_xml_metrics()
+
+            # Sliding-scale limits
+            green_no_limit = no_min + 3 + (0.10 * no_min)
+            green_part_limit = part_min + 5 + (0.10 * part_min)
+
+            yellow_no_limit = no_min + 10 + (0.40 * no_min)
+            yellow_part_limit = part_min + 15 + (0.40 * part_min)
+
+            if my_no <= green_no_limit and my_part <= green_part_limit:
+                return 0  # Green
+            elif my_no <= yellow_no_limit and my_part <= yellow_part_limit:
+                return 1  # Yellow
+            else:
+                return 2  # Red
+
+        # 3. Perform sorting
         def sort_key(result: LayoutResult):
-            difficulty = result.get_total_cut_difficulty()
+            no_count, part_count = result.get_xml_metrics()
+            tier_val = get_tier_value(result)
             return (
-                len(result.unplaced),
-                result.get_used_sheets(),
-                difficulty.total_cuts,
-                difficulty.direction_changes,
+                result.get_unplaced_count(),           # 1. Minimize unplaced count
+                result.get_used_sheets(),              # 2. Minimize sheets used
+                tier_val,                              # 3. Dynamic Tier rank (Green=0, Yellow=1, Red=2)
+                -result.get_remaining_quality_value(), # 4. Maximize offcut quality when tiers are equal
+                no_count,                              # 5. Tiebreaker: Minimize primary cut bands
+                part_count,                            # 6. Tiebreaker: Minimize cut operations
             )
 
         return sorted(results, key=sort_key)
-
+    
     def best(self) -> LayoutResult:
         return self.results[0]
 

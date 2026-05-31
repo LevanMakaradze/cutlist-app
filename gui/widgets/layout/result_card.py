@@ -57,7 +57,8 @@ class ResultCard(QFrame):
             stats_layout.addWidget(lbl, row, 0, Qt.AlignLeft)
             stats_layout.addWidget(val, row, 1, Qt.AlignRight)
 
-        difficulty = result.get_total_cut_difficulty()
+        my_no, my_part = result.get_xml_metrics()
+
         add_stat(
             0,
             "გამოყენებული ფილები:",
@@ -69,8 +70,8 @@ class ResultCard(QFrame):
         )
         add_stat(
             3,
-            "გაჭრების რაოდენობა:",
-            f"{difficulty.total_cuts} (მიმართულება: {difficulty.direction_changes})",
+            "ხელით განთავსება:",
+            f"{my_no} ოპერაცია({my_part} გაჭრა)",
         )
 
         layout.addLayout(stats_layout)
