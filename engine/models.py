@@ -344,28 +344,28 @@ class LayoutResultCollection:
         return results
 
     def _sort(self, results: list[LayoutResult]) -> list[LayoutResult]:
-        # 1. Pre-calculate the baseline minimum cuts/parts for each (unplaced, sheets) group
-        baselines = {}
-        for r in results:
-            key = (r.get_unplaced_count(), r.get_used_sheets())
-            no_val, part_val = r.get_xml_metrics()
-            if key not in baselines:
-                baselines[key] = {"no": [], "part": []}
-            baselines[key]["no"].append(no_val)
-            baselines[key]["part"].append(part_val)
+        # Identify minimum sheets used among perfect runs
+        perfect_runs = [r for r in results if r.get_unplaced_count() == 0]
+        if perfect_runs:
+            sheets_min = min(r.get_used_sheets() for r in perfect_runs)
+            
+            # Find baseline minimum complexity specifically on layouts matching the minimum sheet count
+            best_at_min_sheets = [r for r in perfect_runs if r.get_used_sheets() == sheets_min]
+            no_min = min(r.get_xml_metrics()[0] for r in best_at_min_sheets)
+            part_min = min(r.get_xml_metrics()[1] for r in best_at_min_sheets)
+        else:
+            sheets_min = 999
+            no_min = 1
+            part_min = 1
 
-        baseline_mins = {
-            key: (min(data["no"]), min(data["part"]))
-            for key, data in baselines.items()
-        }
-
-        # 2. Helper to calculate dynamic sliding-scale tier value (0 = Green, 1 = Yellow, 2 = Red)
+        # calculate dynamic sliding-scale tier value (0 = Green, 1 = Yellow, 2 = Red)
         def get_tier_value(r: LayoutResult) -> int:
             if r.get_unplaced_count() > 0:
-                return 2  # Always Red if parts are left over
+                return 2  # Red if parts are left over
                 
-            key = (r.get_unplaced_count(), r.get_used_sheets())
-            no_min, part_min = baseline_mins[key]
+            if r.get_used_sheets() > sheets_min:
+                return 2  # AUTOMATICALLY RED: if it uses more sheets than the minimum achieved
+
             my_no, my_part = r.get_xml_metrics()
 
             # Sliding-scale limits

@@ -373,11 +373,15 @@ class LayoutPanel(QWidget):
         
         "green" - 
         "yellow" -
-        "red" - has unplaced part,
+        "red" - has unplaced part/has usedd more sheet than min/has too much
         """
+        
         # Results with any unplaced parts are automatically flagged as red
         if result.get_unplaced_count() > 0:
             return "red"
+        
+        if not results:
+            return "green"
 
         # Evaluate against results that successfully placed all parts
         perfect_results = [r for r in results if r.get_unplaced_count() == 0]
@@ -385,43 +389,40 @@ class LayoutPanel(QWidget):
             return "green"
 
         sheets_min = min(r.get_used_sheets() for r in perfect_results)
-
-        # Penalize results utilizing excessive sheets
-        if result.get_used_sheets() > sheets_min + 1:
+    
+        if result.get_used_sheets() > sheets_min:
             return "red"
-        elif result.get_used_sheets() == sheets_min + 1:
+
+        # Evaluate XML complexity metrics only on the optimal sheet count
+        best_at_min_sheets = [
+            r for r in perfect_results if r.get_used_sheets() == sheets_min
+        ]
+        
+        # Find the absolute best XML counts achieved for the minimum sheet count
+        best_no_metrics = [r.get_xml_metrics()[0] for r in best_at_min_sheets]
+        best_part_metrics = [r.get_xml_metrics()[1] for r in best_at_min_sheets]
+
+        no_min = min(best_no_metrics) if best_no_metrics else 1
+        part_min = min(best_part_metrics) if best_part_metrics else 1
+
+        my_no, my_part = result.get_xml_metrics()
+
+        # Scaled Calculation for classification
+        # Green Limit: Base + Absolute Buffer of 3/5 + 10% of minimum
+        green_no_limit = no_min + 3 + (0.10 * no_min)
+        green_part_limit = part_min + 5 + (0.10 * part_min)
+
+        # Yellow Limit: Base + Absolute Buffer of 10/15 + 40% of minimum
+        yellow_no_limit = no_min + 10 + (0.40 * no_min)
+        yellow_part_limit = part_min + 15 + (0.40 * part_min)
+
+        # Classification
+        if my_no <= green_no_limit and my_part <= green_part_limit:
+            return "green"
+        elif my_no <= yellow_no_limit and my_part <= yellow_part_limit:
             return "yellow"
         else:
-            # We are on the optimal sheet count; evaluate XML complexity ratios
-            best_at_min_sheets = [
-                r for r in perfect_results if r.get_used_sheets() == sheets_min
-            ]
-            
-            # Find the absolute best XML counts achieved for the minimum sheet count
-            best_no_metrics = [r.get_xml_metrics()[0] for r in best_at_min_sheets]
-            best_part_metrics = [r.get_xml_metrics()[1] for r in best_at_min_sheets]
-
-            no_min = min(best_no_metrics) if best_no_metrics else 1
-            part_min = min(best_part_metrics) if best_part_metrics else 1
-
-            my_no, my_part = result.get_xml_metrics()
-
-            # Scaled Calculation for classification
-            # Green Limit: Base + Absolute Buffer of 3/5 + 10% of minimum
-            green_no_limit = no_min + 3 + (0.10 * no_min)
-            green_part_limit = part_min + 5 + (0.10 * part_min)
-
-            # Yellow Limit: Base + Absolute Buffer of 10/15 + 40% of minimum
-            yellow_no_limit = no_min + 10 + (0.40 * no_min)
-            yellow_part_limit = part_min + 15 + (0.40 * part_min)
-
-            # Classification
-            if my_no <= green_no_limit and my_part <= green_part_limit:
-                return "green"
-            elif my_no <= yellow_no_limit and my_part <= yellow_part_limit:
-                return "yellow"
-            else:
-                return "red"
+            return "red"
 
     def _populate_results(self, collection):
         self._clear_layout(self.results_grid)
@@ -516,7 +517,7 @@ class LayoutPanel(QWidget):
             try:
                 export_layout_xml(self.current_result,self.settings.get("kerf"), file_path)
                 QMessageBox.information(
-                    self, "წარმატება", "მონაცემები წარმატებით გაექსპორტდა XML ფორმატში!"
+                    self, "წარმატება", "მონაცემები შენახულია XML ფორმატში!"
                 )
             except Exception as e:
                 QMessageBox.critical(
