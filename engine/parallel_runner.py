@@ -8,6 +8,7 @@ def _run_variant(args) -> LayoutResult:
 
 def run_all_parallel(parts: list[PartSpec], sheets: list[SheetSpec], settings: dict) -> LayoutResultCollection:
     results = []
+    errors = []
     with ProcessPoolExecutor() as executor:
         futures = {
             executor.submit(_run_variant, (variant, parts, sheets, settings)): variant
@@ -19,6 +20,10 @@ def run_all_parallel(parts: list[PartSpec], sheets: list[SheetSpec], settings: d
                 result = future.result()
                 results.append(result)
             except Exception as e:
-                print(f"  {variant.name} failed: {e}")
+                errors.append(f"{variant.name}: {e}")
+
+    # If all variants fail, raise an error to inform the UI rather instead of returning empty lists
+    if not results and errors:
+        raise RuntimeError("გამოთვლის ყველა ალგორითმის შეცდომა:\n" + "\n".join(errors))
 
     return LayoutResultCollection(results)

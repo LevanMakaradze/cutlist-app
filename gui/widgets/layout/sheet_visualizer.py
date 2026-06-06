@@ -23,6 +23,12 @@ class SheetVisualizer(QWidget):
         margin = 25
         rect = self.rect().adjusted(margin, margin, -margin, -margin)
 
+        # Zero dimension safety check
+        if sheet.width <= 0 or sheet.height <= 0:
+            painter.setPen(QColor("#ef4444"))
+            painter.drawText(rect, Qt.AlignCenter, "არასწორი ზომის ფილა")
+            return
+        
         sheet = self.sheet_layout.sheet
         scale_x = rect.width() / sheet.width
         scale_y = rect.height() / sheet.height
@@ -37,7 +43,6 @@ class SheetVisualizer(QWidget):
         font = QFont("Segoe UI", 9, QFont.Bold)
         painter.setFont(font)
 
-        difficulty = self.sheet_layout.get_cut_difficulty()
         title = f"{sheet.name} #{self.sheet_layout.sheet_number}"
         painter.drawText(int(dx), int(dy - 8), title)
 

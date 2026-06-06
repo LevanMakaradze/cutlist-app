@@ -1,5 +1,5 @@
-from pathlib import Path
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: SettingsManager):
         super().__init__()
         self.settings = settings
-        self.setWindowTitle("CutList - Cutting Optimization")
+        self.setWindowTitle("CutList - ჭრის ოპტიმიზაცია")
         self.create_menu()
         self.create_ui()
         self.sheets_panel.load_saved(warn_if_dirty=False)
@@ -140,3 +140,25 @@ class MainWindow(QMainWindow):
         self.project_panel.project_saved.connect(
             lambda _: self.history_panel.refresh()
         )
+        
+    # Protect against thread destruction crashes on exit
+    def closeEvent(self, event: QCloseEvent):
+        if hasattr(self, "layout_panel") and self.layout_panel.worker:
+            if self.layout_panel.worker.isRunning():
+                box = QMessageBox(self)
+                box.setWindowTitle("გაფრთხილება")
+                box.setText("მიმდინარეობს გამოთვლები. ნამდვილად გსურთ პროგრამის დახურვა?")
+                box.setIcon(QMessageBox.Question)
+                yes_btn = box.addButton("დიახ", QMessageBox.YesRole)
+                no_btn = box.addButton("არა", QMessageBox.NoRole)
+                box.exec()
+                
+                if box.clickedButton() == yes_btn:
+                    # Request termination or wait
+                    self.layout_panel.worker.terminate()
+                    self.layout_panel.worker.wait()
+                    event.accept()
+                else:
+                    event.ignore()
+                    return
+        event.accept()

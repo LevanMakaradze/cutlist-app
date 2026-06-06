@@ -1,9 +1,19 @@
 import sys
+import multiprocessing
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from gui.main_window import MainWindow
 from services.settings_manager import SettingsManager
 
+# Global exception handler to prevent silent exits
+def global_exception_handler(exctype, value, traceback):
+    sys.__excepthook__(exctype, value, traceback)
+    error_msg = f"დაფიქსირდა მოულოდნელი შეცდომა:\n\n{value}"
+    # Ensure there is a running application instance
+    if QApplication.instance():
+        QMessageBox.critical(None, "შეცდომა", error_msg)
+    else:
+        print(error_msg, file=sys.stderr)
 
 def load_application_theme(app: QApplication, styles_dir: Path):
     """Aggregates and loads the modular QSS stylesheets."""
@@ -30,6 +40,11 @@ def load_application_theme(app: QApplication, styles_dir: Path):
 
 
 def main():
+    # Call freeze_support immediately to fix recursive subprocess launches
+    multiprocessing.freeze_support()
+
+    # Set the global exception handler
+    sys.excepthook = global_exception_handler
 
     app = QApplication(sys.argv)
 
@@ -48,6 +63,4 @@ def main():
 
 
 if __name__ == "__main__":
-    from PySide6.QtCore import Qt
-
     main()

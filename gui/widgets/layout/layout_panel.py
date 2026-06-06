@@ -240,7 +240,7 @@ class LayoutPanel(QWidget):
             l_str = p.get("სიგრძე", "").strip()
             w_str = p.get("სიგანე", "").strip()
             q_str = p.get("რაოდენობა", "").strip()
-            locked = p.get("ბრუნვა", False)
+            locked = p.get("ტექსტურა", False)
 
             if not l_str or not w_str:
                 continue
