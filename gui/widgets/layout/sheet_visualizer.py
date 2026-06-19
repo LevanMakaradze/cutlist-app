@@ -23,6 +23,8 @@ class SheetVisualizer(QWidget):
         margin = 25
         rect = self.rect().adjusted(margin, margin, -margin, -margin)
 
+        sheet = self.sheet_layout.sheet
+        
         # Zero dimension safety check
         if sheet.width <= 0 or sheet.height <= 0:
             painter.setPen(QColor("#ef4444"))

@@ -71,7 +71,12 @@ class ResultCard(QFrame):
         add_stat(
             3,
             "ხელით განთავსება:",
-            f"{my_no} ოპერაცია({my_part} გაჭრა)",
+            f"{my_no} ოპერაცია",
+        )
+        add_stat(
+            4,
+            "გაჭრების რაოდენობა:",
+            f"{my_part}"
         )
 
         layout.addLayout(stats_layout)

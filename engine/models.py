@@ -1,6 +1,3 @@
-import math
-
-
 class PartSpec:
     def __init__(
         self,
@@ -167,7 +164,7 @@ class LayoutResult:
     def __init__(
         self,
         sheets: list[SheetLayout],
-        unplaced: list[PartInstance],
+        unplaced: list[PartSpec],
         algorithm: str,
     ):
         self.sheets = sheets

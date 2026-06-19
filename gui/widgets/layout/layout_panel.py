@@ -171,15 +171,17 @@ class LayoutPanel(QWidget):
         self.stat_algo = QLabel()
         self.stat_sheets = QLabel()
         self.stat_util = QLabel()
+        self.stat_oper = QLabel()
         self.stat_cuts = QLabel()
-        self.stat_turns = QLabel()
+        self.stat_unplaced = QLabel()
 
         for lbl in [
             self.stat_algo,
             self.stat_sheets,
             self.stat_util,
+            self.stat_oper,
             self.stat_cuts,
-            self.stat_turns,
+            self.stat_unplaced,
         ]:
             lbl.setStyleSheet("font-size: 9.5pt; color: #1e293b;")
             stats_layout.addWidget(lbl)
@@ -231,6 +233,7 @@ class LayoutPanel(QWidget):
                 w = item.widget()
                 if w:
                     w.setParent(None)
+                    w.deleteLater()
 
     def _get_parts_from_gui(self) -> list[PartSpec]:
         data = self.project_panel.table.get_data()
@@ -299,6 +302,11 @@ class LayoutPanel(QWidget):
         if self.worker and self.worker.isRunning():
             return
 
+        if self.worker:
+            self.worker.finished.disconnect()
+            self.worker.error.disconnect()
+            self.worker = None
+            
         parts = self._get_parts_from_gui()
         sheets = self._get_sheets_from_gui()
 
@@ -459,13 +467,15 @@ class LayoutPanel(QWidget):
             f"<b>მასალის ათვისება:</b> {result.get_total_utilization():.1f}%"
         )
         my_no, my_part = result.get_xml_metrics()
+        self.stat_oper.setText(
+            f"<b>ხელით განთავსება:</b> {my_no}\n ოპერაცია"
+        )
         self.stat_cuts.setText(
-            f"<b>ხელით განთავსება:</b> {my_no} ოპერაცია({my_part} გაჭრა)"
+            f"<b>გაჭრების რაოდენობა:</b> {my_part}"
         )
-        self.stat_turns.setText(
-            f"<b>გაუნაწილებელი დეტალები:</b> {result.get_unplaced_count()} ცალი)"
+        self.stat_unplaced.setText(
+            f"<b>გაუნაწილებელი დეტალები:</b> {result.get_unplaced_count()} ცალი"
         )
-        self.stat_turns.setVisible(False)
 
         self._clear_layout(self.unplaced_scroll_layout)
         if result.unplaced:
